@@ -1,0 +1,1654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cutline - Writer-First Mobile</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Spacing Scale (4px base for mobile) */
+            --space-1: 4px;
+            --space-2: 8px;
+            --space-3: 12px;
+            --space-4: 16px;
+            --space-5: 20px;
+            --space-6: 24px;
+            --space-8: 32px;
+
+            /* Colors */
+            --bg-primary: #0f0f0f;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #242424;
+            --bg-hover: #2a2a2a;
+            --border-color: #333;
+            --text-primary: #f5f5f5;
+            --text-secondary: #a0a0a0;
+            --text-muted: #999;
+            --accent: #6366f1;
+            --accent-hover: #818cf8;
+            --accent-light: rgba(99, 102, 241, 0.2);
+            --success: #22c55e;
+            --warning: #f59e0b;
+
+            /* Fountain Colors */
+            --fountain-scene: #fbbf24;
+            --fountain-character: #60a5fa;
+            --fountain-dialogue: #f5f5f5;
+            --fountain-parenthetical: #9ca3af;
+            --fountain-action: #f5f5f5;
+
+            /* Typography Scale */
+            --font-size-xs: 12px;
+            --font-size-sm: 14px;
+            --font-size-base: 16px;
+            --font-size-lg: 18px;
+            --font-size-xl: 24px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: var(--text-primary);
+            line-height: 1.6;
+            font-size: var(--font-size-base);
+        }
+
+        .header {
+            background: rgba(15, 15, 15, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            padding: var(--space-4) var(--space-6);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .section-title {
+            text-align: center;
+            padding: var(--space-6) var(--space-4) var(--space-4);
+        }
+
+        .section-title h1 {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            margin-bottom: var(--space-1);
+        }
+
+        .section-title p {
+            color: var(--text-muted);
+            font-size: var(--font-size-sm);
+        }
+
+        /* iPhone Frame */
+        .iphone-frame {
+            width: 320px;
+            height: 680px;
+            background: #1a1a1a;
+            border-radius: 50px;
+            padding: var(--space-3);
+            box-shadow:
+                0 0 0 2px #2a2a2a,
+                0 0 0 4px #1a1a1a,
+                inset 0 0 0 2px #3a3a3a,
+                0 20px 60px rgba(0, 0, 0, 0.5),
+                0 0 80px rgba(99, 102, 241, 0.1);
+            position: relative;
+            margin: 0 auto;
+        }
+
+        .iphone-frame::before {
+            content: '';
+            position: absolute;
+            top: var(--space-3);
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 28px;
+            background: #0a0a0a;
+            border-radius: 0 0 20px 20px;
+            z-index: 10;
+        }
+
+        .iphone-screen {
+            width: 100%;
+            height: 100%;
+            background: var(--bg-primary);
+            border-radius: 40px;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .home-indicator {
+            position: absolute;
+            bottom: var(--space-2);
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+            z-index: 10;
+        }
+
+        /* Grid Layout */
+        .screens-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--space-8);
+            padding: var(--space-5) var(--space-10) var(--space-16);
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 1200px) {
+            .screens-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 768px) {
+            .screens-grid { grid-template-columns: 1fr; }
+        }
+
+        .screen-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .screen-label {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        .screen-label span {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        /* Mobile Top Bar */
+        .mobile-top-bar {
+            padding: var(--space-3) var(--space-4) 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .script-title-top {
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+        }
+
+        .save-indicator {
+            font-size: var(--font-size-xs);
+            color: var(--success);
+            display: flex;
+            align-items: center;
+            gap: var(--space-1);
+        }
+
+        .save-indicator.unsaved {
+            color: var(--warning);
+        }
+
+        /* Scene Nav Bar */
+        .scene-nav-bar {
+            padding: var(--space-2) var(--space-4);
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .scene-nav-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            padding: var(--space-1);
+            /* Minimum touch target 44px */
+            min-width: 44px;
+            min-height: 44px;
+        }
+
+        .scene-nav-text {
+            font-size: var(--font-size-sm);
+        }
+
+        /* Script Editor */
+        .script-editor-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--space-4);
+        }
+
+        .script-page {
+            background: #1e1e1e;
+            padding: var(--space-4);
+            border-radius: var(--space-2);
+            min-height: 100%;
+            /* Better page boundary */
+            border: 1px solid var(--border-color);
+            /* Branded cursor */
+            caret-color: var(--accent);
+        }
+
+        .script-editor {
+            font-family: 'Courier Prime', 'Courier New', monospace;
+            /* Increased font size for mobile readability */
+            font-size: 1rem;
+            line-height: 1.4;
+            color: var(--fountain-dialogue);
+            white-space: pre-wrap;
+        }
+
+        .fountain-scene {
+            color: var(--fountain-scene);
+            font-weight: bold;
+            text-transform: uppercase;
+            margin: 1rem 0 0.5rem;
+        }
+
+        .fountain-action {
+            color: var(--fountain-action);
+            margin: 0.4rem 0;
+        }
+
+        .fountain-character {
+            color: var(--fountain-character);
+            text-align: center;
+            margin: 1rem 0 0;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .fountain-parenthetical {
+            color: var(--fountain-parenthetical);
+            font-style: italic;
+            text-align: center;
+            font-size: 0.9em;
+        }
+
+        .fountain-dialogue {
+            color: var(--fountain-dialogue);
+            text-align: center;
+        }
+
+        /* Bottom Nav Bar */
+        .bottom-nav {
+            background: var(--bg-secondary);
+            padding: var(--space-2) var(--space-4);
+            padding-bottom: var(--space-5);
+            display: flex;
+            justify-content: space-around;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--space-1);
+            font-size: 10px;
+            color: var(--text-muted);
+            background: none;
+            border: none;
+            cursor: pointer;
+            /* Minimum touch target */
+            min-height: 44px;
+            padding: var(--space-1);
+        }
+
+        .nav-item.active {
+            color: var(--accent);
+        }
+
+        .nav-item svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        /* Format Bar (slides up) */
+        .format-bar {
+            background: var(--bg-tertiary);
+            padding: var(--space-2);
+            display: flex;
+            gap: var(--space-1);
+            overflow-x: auto;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .format-bar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .format-btn {
+            flex-shrink: 0;
+            /* Increased touch target */
+            padding: var(--space-2) var(--space-3);
+            border-radius: var(--space-2);
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            border: none;
+            font-size: var(--font-size-xs);
+            font-weight: 500;
+            white-space: nowrap;
+            /* Minimum touch target 44px */
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .format-btn.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        /* Slide-over Panels */
+        .slide-panel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--bg-primary);
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            z-index: 5;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .slide-panel.open {
+            transform: translateX(0);
+        }
+
+        .slide-panel-header {
+            padding: var(--space-4);
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+        }
+
+        .slide-panel-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--space-4);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: var(--font-size-xl);
+            padding: 0;
+            /* Minimum touch target */
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Scene List in Slide Panel */
+        .scene-list-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            padding: var(--space-3);
+            background: var(--bg-tertiary);
+            border-radius: var(--space-2);
+            margin-bottom: var(--space-2);
+            /* Enhanced active state */
+            border-left: 3px solid transparent;
+        }
+
+        .scene-list-item.active {
+            background: var(--accent-light);
+            border-left-color: var(--accent);
+        }
+
+        .scene-icon {
+            width: var(--space-3);
+            height: var(--space-3);
+            flex-shrink: 0;
+        }
+
+        .scene-icon.int { color: var(--fountain-scene); }
+        .scene-icon.ext { color: var(--success); }
+
+        /* Other Screens Content */
+        .screen-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--space-4);
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border-radius: var(--space-3);
+            padding: var(--space-4);
+            margin-bottom: var(--space-4);
+        }
+
+        .card-title {
+            font-weight: 600;
+            font-size: var(--font-size-sm);
+            margin-bottom: var(--space-2);
+        }
+
+        .card-subtitle {
+            font-size: var(--font-size-xs);
+            color: var(--text-muted);
+            margin-bottom: var(--space-3);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--space-3);
+            margin-bottom: var(--space-4);
+        }
+
+        .stat-card {
+            background: var(--bg-tertiary);
+            border-radius: var(--space-2);
+            padding: var(--space-4);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        /* Shot Card */
+        .shot-card {
+            background: var(--bg-tertiary);
+            border-radius: var(--space-2);
+            padding: var(--space-3);
+            margin-bottom: var(--space-2);
+            display: flex;
+            gap: var(--space-3);
+        }
+
+        .shot-number {
+            width: 32px;
+            height: 32px;
+            background: var(--accent);
+            border-radius: var(--space-2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: var(--font-size-sm);
+            flex-shrink: 0;
+        }
+
+        .shot-info {
+            flex: 1;
+        }
+
+        .shot-type {
+            font-weight: 600;
+            font-size: var(--font-size-sm);
+        }
+
+        .shot-desc {
+            font-size: var(--font-size-xs);
+            color: var(--text-muted);
+            margin-top: var(--space-1);
+        }
+
+        /* Filmstrip */
+        .filmstrip {
+            display: flex;
+            gap: var(--space-2);
+            overflow-x: auto;
+            padding: var(--space-2);
+            margin: calc(var(--space-2) * -1) calc(var(--space-4) * -1) var(--space-4);
+        }
+
+        .filmstrip::-webkit-scrollbar {
+            display: none;
+        }
+
+        .filmstrip-thumb {
+            flex-shrink: 0;
+            width: 70px;
+            border-radius: var(--space-2);
+            overflow: hidden;
+            border: 2px solid transparent;
+        }
+
+        .filmstrip-thumb.selected {
+            border-color: var(--accent);
+        }
+
+        .filmstrip-thumb img {
+            width: 100%;
+            aspect-ratio: 16/9;
+            object-fit: cover;
+            background: var(--bg-tertiary);
+        }
+
+        /* Badge */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: var(--space-1) var(--space-2);
+            border-radius: var(--space-1);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+        }
+
+        .badge-success { background: rgba(34, 197, 94, 0.2); color: var(--success); }
+        .badge-warning { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+
+        /* Icon */
+        .icon {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
+        }
+
+        /* Button */
+        .btn {
+            padding: var(--space-2) var(--space-4);
+            border-radius: var(--space-2);
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-2);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-sm {
+            padding: var(--space-1) var(--space-3);
+            font-size: var(--font-size-xs);
+        }
+
+        /* FAB */
+        .fab {
+            position: absolute;
+            bottom: var(--space-20);
+            right: var(--space-4);
+            width: 56px;
+            height: 56px;
+            border-radius: var(--space-4);
+            background: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+            border: none;
+            z-index: 4;
+        }
+
+        /* View Toggle */
+        .view-toggle {
+            display: flex;
+            background: var(--bg-tertiary);
+            border-radius: var(--space-2);
+            padding: var(--space-1);
+        }
+
+        .view-toggle button {
+            padding: var(--space-1) var(--space-2);
+            border-radius: var(--space-1);
+            background: transparent;
+            color: var(--text-muted);
+            border: none;
+            font-size: var(--font-size-xs);
+        }
+
+        .view-toggle button.active {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        /* Character List */
+        .character-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-2);
+            background: var(--bg-tertiary);
+            border-radius: var(--space-2);
+            margin-bottom: var(--space-1);
+        }
+
+        .character-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+        }
+
+        .character-name {
+            flex: 1;
+            font-size: var(--font-size-sm);
+        }
+
+        .character-count {
+            font-size: var(--font-size-xs);
+            color: var(--text-muted);
+        }
+
+        /* Focus Mode */
+        .focus-mode .bottom-nav {
+            display: none;
+        }
+
+        .focus-mode .fab {
+            display: none;
+        }
+
+        /* Quick Format */
+        .quick-format {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: var(--space-4);
+            transform: translateY(100%);
+            transition: transform 0.2s;
+            z-index: 20;
+        }
+
+        .quick-format.show {
+            transform: translateY(0);
+        }
+
+        .quick-format-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--space-2);
+        }
+
+        .quick-format-btn {
+            padding: var(--space-3);
+            border-radius: var(--space-2);
+            background: var(--bg-tertiary);
+            border: none;
+            color: var(--text-secondary);
+            font-size: var(--font-size-xs);
+            font-weight: 500;
+            /* Minimum touch target */
+            min-height: 44px;
+        }
+
+        .quick-format-btn:active {
+            background: var(--accent);
+            color: white;
+        }
+
+        /* Better touch targets for format bar */
+        .format-bar-btn {
+            /* Larger touch targets */
+            min-height: 44px;
+            min-width: 60px;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">Cutline</div>
+        <div style="font-size: var(--font-size-sm); color: var(--text-muted);">Writer-First Mobile</div>
+    </header>
+
+    <div class="section-title">
+        <h1>Script Editor First</h1>
+        <p>12 Mobile Screens • iPhone 15 Pro Frame • Fade In Style • Improved</p>
+    </div>
+
+    <div class="screens-grid">
+        <!-- Screen 1: Main Script Editor (Primary) -->
+        <div class="screen-wrapper">
+            <div class="iphone-frame">
+                <div class="iphone-screen">
+                    <!-- Top Bar -->
+                    <div class="mobile-top-bar">
+                        <button class="btn" style="padding: var(--space-1);" onclick="this.closest('.iphone-screen').querySelector('.slide-panel').classList.add('open')">
+                            <svg class="icon" viewBox="0 0 24 24"><path d="M3 4h18M3 12h18M3 20h18"/></svg>
+                        </button>
+                        <div class="script-title-top">The Last Train</div>
+                        <div class="view-toggle">
+                            <button class="active">
+                                <svg class="icon" viewBox="0 0 24 24" style="width:14px;height:14px;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>
+                            </button>
+                            <button>
+                                <svg class="icon" viewBox="0 0 24 24" style="width:14px;height:14px;"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m-9-9h6m6 0h6"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Scene Nav -->
+                    <div class="scene-nav-bar">
+                        <button class="scene-nav-btn">←</button>
+                        <span class="scene-nav-text">Scene <strong>1</strong> of 12</span>
+                        <button class="scene-nav-btn">→</button>
+                    </div>
+
+                    <!-- Script Editor -->
+                    <div class="script-editor-container">
+                        <div class="script-page">
+                            <div class="script-editor">
+<span class="fountain-scene">INT. COFFEE SHOP - DAY</span>
+
+<span class="fountain-action">JANE (30s) sits at a corner table, laptop open. She types furiously, ignoring the world around her.</span>
+
+<span class="fountain-action">MARK (30s) approaches hesitantly, two coffees in hand.</span>
+
+<span class="fountain-character">MARK</span>
+<span class="fountain-parenthetical">(quietly)</span>
+<span class="fountain-dialogue">Mind if I join?</span>
+
+<span class="fountain-character">JANE</span>
+<span class="fountain-action">without looking up</span>
+<span class="fountain-dialogue">It's a free country.</span>
+
+<span class="fountain-action">Jane stops typing. She looks up.</span>
+
+<span class="fountain-character">MARK</span>
+<span class="fountain-dialogue">Jane, please. We need to talk.</span>
+
+<span class="fountain-character">JANE</span>
+<span class="fountain-dialogue">There's nothing to talk about.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Format Bar with better touch targets -->
+                    <div class="format-bar">
+                        <button class="format-btn format-bar-btn active">Scene</button>
+                        <button class="format-btn format-bar-btn">Char</button>
+                        <button class="format-btn format-bar-btn">Dial</button>
+                        <button class="format-btn format-bar-btn">Act</button>
+                        <button class="format-btn format-bar-btn">Paren</button>
+                        <button class="format-btn format-bar-btn">More ▼</button>
+                    </div>
+
+                    <!-- FAB -->
+                    <button class="fab" onclick="this.parentElement.querySelector('.quick-format').classList.add('show')">
+                        <svg class="icon" viewBox="0 0 24 24" style="color:white;"><path d="M12 5v14M5 12h14"/></svg>
+                    </button>
+
+                    <!-- Quick Format Panel -->
+                    <div class="quick-format">
+                        <div style="display:flex;justify-content:space-between;margin-bottom:var(--space-3);">
+                            <span style="font-size:var(--font-size-sm);font-weight:600;">Format Element</span>
+                            <button style="background:none;border:none;color:var(--text-muted);width:44px;height:44px;display:flex;align-items:center;justify-content:center;" onclick="this.closest('.quick-format').classList.remove('show')">✕</button>
+                        </div>
+                        <div class="quick-format-grid">
+                            <button class="quick-format-btn" style="color:var(--fountain-scene);">Scene</button>
+                            <button class="quick-format-btn" style="color:var(--fountain-action);">Action</button>
+                            <button class="quick-format-btn" style="color:var(--fountain-character);">Character</button>
+                            <button class="quick-format-btn" style="color:var(--fountain-dialogue);">Dialogue</button>
+                            <button class="quick-format-btn" style="color:var(--fountain-parenthetical);">Parenthetical</button>
+                            <button class="quick-format-btn">Transition</button>
+                            <button class="quick-format-btn">Shot</button>
+                            <button class="quick-format-btn">Note</button>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Nav -->
+                    <div class="bottom-nav">
+                        <button class="nav-item active">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                            Script
+                        </button>
+                        <button class="nav-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                            Shots
+                        </button>
+                        <button class="nav-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83"/></svg>
+                            Boards
+                        </button>
+                        <button class="nav-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/></svg>
+                            Breakdown
+                        </button>
+                    </div>
+
+                    <!-- Scene Slide Panel -->
+                    <div class="slide-panel">
+                        <div class="slide-panel-header">
+                            <button class="close-btn" onclick="this.closest('.slide-panel').classList.remove('open')">×</button>
+                            <span style="font-weight:600;">Scenes</span>
+                            <button style="background:none;border:none;color:var(--accent);width:44px;height:44px;">+</button>
+                        </div>
+                        <div class="slide-panel-content">
+                            <div class="scene-list-item active">
+                                <svg class="scene-icon int" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                                <div style="flex:1;">
+                                    <div style="font-size:var(--font-size-sm);font-weight:500;">Coffee Shop</div>
+                                    <div style="font-size:var(--font-size-xs);color:var(--text-muted);">INT • Day</div>
+                                </div>
+                            </div>
+                            <div class="scene-list-item">
+                                <svg class="scene-icon int" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                                <div style="flex:1;">
+                                    <div style="font-size:var(--font-size-sm);font-weight:500;">Jane's Apartment</div>
+                                    <div style="font-size:var(--font-size-xs);color:var(--text-muted);">INT • Night</div>
+                                </div>
+                            </div>
+                            <div class="scene-list-item">
+                                <svg class="scene-icon ext" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
+                                <div style="flex:1;">
+                                    <div style="font-size:var(--font-size-sm);font-weight:500;">Train Platform</div>
+                                    <div style="font-size:var(--font-size-xs);color:var(--text-muted);">EXT • Day</div>
+                                </div>
+                            </div>
+                            <div class="scene-list-item">
+                                <svg class="scene-icon int" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                                <div style="flex:1;">
+                                    <div style="font-size:var(--font-size-sm);font-weight:500;">Train Car</div>
+                                    <div style="font-size:var(--font-size-xs);color:var(--text-muted);">INT • Day</div>
+                                </div>
+                            </div>
+                            <hr style="border:none;border-top:1px solid var(--border-color);margin:var(--space-4) 0;">
+                            <div style="font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:var(--space-2);">Script Stats</div>
+                            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-2);font-size:var(--font-size-xs);">
+                                <div style="background:var(--bg-tertiary);padding:var(--space-2);border-radius:var(--space-2);text-align:center;">
+                                    <div style="font-weight:600;">12</div>
+                                    <div style="color:var(--text-muted);">Scenes</div>
+                                </div>
+                                <div style="background:var(--bg-tertiary);padding:var(--space-2);border-radius:var(--space-2);text-align:center;">
+                                    <div style="font-weight:600;">6</div>
+                                    <div style="color:var(--text-muted);">Characters</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="home-indicator"></div>
+                </div>
+            </div>
+            <div class="screen-label"><span>1.</span> Main Script Editor</div>
+        </div>
+
+        <!-- Screen 2: Script Editor - Focus Mode -->
+        <div class="screen-wrapper">
+            <div class="iphone-frame">
+                <div class="iphone-screen">
+                    <!-- Minimal Top Bar -->
+                    <div class="mobile-top-bar">
+                        <button class="btn" style="padding: var(--space-1);">
+                            <svg class="icon" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                        </button>
+                        <span style="font-size:var(--font-size-xs);color:var(--text-muted);">Focus Mode</span>
+                        <button class="btn" style="padding: var(--space-1);">
+                            <svg class="icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 001.48-5.34c-.47-2.78-2.79-5-5.59-5.34a6.505 6.505 0 00-7.27 7.27c.34 2.8 2.56 5.12 5.34 5.59a6.5 6.5 0 005.34-1.48l.27.28v.79l4.25 4.25c.41.41 1.08.41 1.08 0 1.49 0 .41-.41.41-1.08 0-1.49L15.5 14zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                        </button>
+                    </div>
+
+                    <!-- Clean Script View -->
+                    <div class="script-editor-container" style="flex:1;">
+                        <div class="script-page">
+                            <div class="script-editor">
+<span class="fountain-scene">INT. COFFEE SHOP - DAY</span>
+
+<span class="fountain-action">JANE (30s) sits at a corner table, laptop open. She types furiously, ignoring the world around her.</span>
+
+<span class="fountain-action">MARK approaches. Two coffees in hand.</span>
+
+<span class="fountain-character">MARK</span>
+<span class="fountain-parenthetical">(quietly)</span>
+<span class="fountain-dialogue">Mind if I join?</span>
+
+<span class="fountain-character">JANE</span>
+<span class="fountain-dialogue">It's a free country.</span>
+
+<span class="fountain-action">Jane stops typing. Looks up.</span>
+
+<span class="fountain-action">Beat.</span>
+
+<span class="fountain-character">MARK</span>
+<span class="fountain-dialogue">Jane, please. We need to talk about yesterday.</span>
+
+<span class="fountain-character">JANE</span>
+<span class="fountain-dialogue">There's nothing to talk about. You made your choice.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Minimal Bottom Bar with better exit -->
+                    <div style="background:var(--bg-secondary);padding:var(--space-3);display:flex;justify-content:center;gap:var(--space-4);border-top:1px solid var(--border-color);margin-top:auto;">
+                        <button style="background:none;border:none;color:var(--text-muted);font-size:var(--font-size-xs);width:44px;">Scene ↑</button>
+                        <button style="background:none;border:none;color:var(--text-muted);font-size:var(--font-size-xs);width:44px;">Scene ↓</button>
+                        <button style="background:none;border:none;color:var(--accent);font-weight:600;font-size:var(--font-size-xs);width:44px;" onclick="this.closest('.iphone-screen').classList.remove('focus-mode')">Exit Focus</button>
+                    </div>
+
+                    <div class="home-indicator"></div>
+                </div>
+            </div>
+            <div class="screen-label"><span>2.</span> Focus Mode</div>
+        </div>
+
+        <!-- Screen 3: Script Editor with Scene Navigator Open -->
+        <div class="screen-wrapper">
+            <div class="iphone-frame">
+                <div class="iphone-screen">
+                    <!-- Top Bar -->
+                    <div class="mobile-top-bar">
+                        <div class="save-indicator">
+                            <div style="width:6px;height:6px;border-radius:50%;background:var(--success);"></div>
+                            Saved
+                        </div>
+                        <div class="script-title-top">The Last Train</div>
+                        <div style="font-size:var(--font-size-xs);color:var(--text-muted);">Page 3 of 27</div>
+                    </div>
+
+                    <!-- Scene Navigator -->
+                    <div style="background:var(--bg-secondary);padding:var(--space-4);border-bottom:1px solid var(--border-color);">
+                        <div style="font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:var(--space-2);">Jump to Scene</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:var(--space-2);">
+                            <button style="padding:var(--space-2) var(--space-3);background:var(--accent);color:white;border:none;border-radius:var(--space-2);font-size:var(--font-size-xs);min-height:32px;">1. Coffee</button>
+                            <button style="padding:var(--space-2) var(--space-3);background:var(--bg-tertiary);color:var(--text-secondary);border:none;border-radius:var(--space-2);font-size:var(--font-size-xs);min-height:32px;">2. Apt</button>
+                            <button style="padding:var(--space-2) var(--space-3);background:var(--bg-tertiary);color:var(--text-secondary);border:none;border-radius:var(--space-2);font-size:var(--font-size-xs);min-height:32px;">3. Platform</button>
+                            <button style="padding:var(--space-2) var(--space-3);background:var(--bg-tertiary);color:var(--text-secondary);border:none;border-radius:var(--space-2);font-size:var(--font-size-xs);min-height:32px;">4. Train</button>
+                            <button style="padding:var(--space-2) var(--space-3);background:var(--bg-tertiary);color:var(--text-secondary);border:none;border-radius:var(--space-2);font-size:var(--font-size-xs);min-height:32px;">5. Street</button>
+                            <button style="padding:var(--space-2) var(--space-3);background:var(--bg-tertiary);color:var(--text-secondary);border:none;border-radius:var(--space-2);font-size:var(--font-size-xs);min-height:32px;">+7 more</button>
+                        </div>
+                    </div>
+
+                    <!-- Script Preview -->
+                    <div class="script-editor-container" style="flex:1;">
+                        <div class="script-page" style="padding:var(--space-3);">
+                            <div class="script-editor" style="font-size:1rem;">
+<span class="fountain-scene">INT. COFFEE SHOP - DAY</span>
+
+<span class="fountain-action">JANE (30s) sits at a corner table...</span>
+                            </div>
+                            <div style="text-align:center;padding:var(--space-4);color:var(--text-muted);font-size:var(--font-size-xs);">
+                                ▼ Scroll to read more
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="home-indicator"></div>
+                </div>
+            </div>
+            <div class="screen-label"><span>3.</span> Scene Navigator</div>
+        </div>
+
+        <!-- Screen 4: Breakdown -->
+        <div class="screen-wrapper">
+            <div class="iphone-frame">
+                <div class="iphone-screen">
+                    <div class="mobile-top-bar">
+                        <button class="btn" style="padding: var(--space-1);">
+                            <svg class="icon" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                        </button>
+                        <span style="font-weight:600;font-size:var(--font-size-sm);">Script Breakdown</span>
+                        <button style="background:none;border:none;color:var(--text-muted);">
+                            <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/></svg>
+                        </button>
+                    </div>
+
+                    <div class="screen-content">
+                        <!-- Tabs -->
+                        <div style="display:flex;border-bottom:1px solid var(--border-color);">
+                            <button style="flex:1;padding:var(--space-3);background:none;border:none;color:var(--accent);border-bottom:2px solid var(--accent);font-size:var(--font-size-sm);">Scenes</button>
+                            <button style="flex:1;padding:var(--space-3);background:none;border:none;color:var(--text-muted);font-size:var(--font-size-sm);">Characters</button>
+                            <button style="flex:1;padding:var(--space-3);background:none;border:none;color:var(--text-muted);font-size:var(--font-size-sm);">Locations</button>
+                        </div>
+
+                        <!-- Stats -->
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-value">12</div>
+                                <div class="stat-label">Scenes</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value">6</div>
+                                <div class="stat-label">Characters</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value">8</div>
+                                <div class="stat-label">Locations</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value">~12</div>
+                                <div class="stat-label">Minutes</div>
+                            </div>
+                        </div>
+
+                        <!-- Scene List -->
+                        <div class="card">
+                            <div class="card-title">Scenes</div>
+                            <div class="scene-list-item">
+                                <svg class="scene-icon int" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                                <div style="flex:1;">
+                                    <div style="font-size:var(--font-size-sm);">1. Coffee Shop</div>
+                                    <div style="font-size:var(--font-size-xs);color:var(--text-muted);">INT • Day • 2 chars</div>
+                                </div>
+                            </div>
+                            <div class="scene-list-item">
+                                <svg class="scene-icon int" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                                <div style="flex:1;">
+                                    <div style="font-size:var(--font-size-sm);">2. Jane's Apartment</div>
+                                    <div style="font-size:var(--font-size-xs);color:var(--text-muted);">INT • Night • 1 char</div>
+                                </div>
+                            </div>
+                            <div class="scene-list-item">
+                                <svg class="scene-icon ext" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
+                                <div style="flex:1;">
+                                    <div style="font-size:var(--font-size-sm);">3. Train Platform</div>
+                                    <div style="font-size:var(--font-size-xs);color:var(--text-muted);">EXT • Day • 3 chars</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bottom-nav">
+                        <button class="nav-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                            Script
+                        </button>
+                        <button class="nav-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/></svg>
+                            Shots
+                        </button>
+                        <button class="nav-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/></svg>
+                            Boards
+                        </button>
+                        <button class="nav-item active">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/></svg>
+                            Breakdown
+                        </button>
+                    </div>
+
+                    <div class="home-indicator"></div>
+                </div>
+            </div>
+            <div class="screen-label"><span>4.</span> Breakdown</div>
+        </div>
+
+        <!-- Screen 5: Shot List Editor -->
+        <div class="screen-wrapper">
+            <div class="iphone-frame">
+                <div class="iphone-screen">
+                    <div class="mobile-top-bar">
+                        <button class="btn" style="padding: var(--space-1);">
+                            <svg class="icon" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                        </button>
+                        <span style="font-weight:600;font-size:var(--font-size-sm);">Shots</span>
+                        <span class="badge badge-success">5/5</span>
+                    </div>
+
+                    <div style="padding:var(--space-2) var(--space-4);background:var(--bg-secondary);">
+                        <div style="font-size:var(--font-size-xs);color:var(--text-muted);">Scene 1</div>
+                        <div style="font-size:var(--font-size-sm);font-weight:600;">INT. COFFEE SHOP - DAY</div>
+                    </div>
+
+                    <div class="screen-content" style="padding-bottom:80px;">
+                        <div class="shot-card">
+                            <div class="shot-number">1</div>
+                            <div class="shot-info">
+                                <div class="shot-type">Wide Shot</div>
+                                <div class="shot-desc">Establish coffee shop, Jane at table</div>
+                            </div>
+                        </div>
+                        <div class="shot-card">
+                            <div class="shot-number">2</div>
+                            <div class="shot-info">
+                                <div class="shot-type">Medium</div>
+                                <div class="shot-desc">Jane typing on laptop</div>
+                            </div>
+                        </div>
+                        <div class="shot-card">
+                            <div class="shot-number">3</div>
+                            <div class="shot-info">
+                                <div class="shot-type">Close-up</div>
+                                <div class="shot-desc">Jane's focused expression</div>
+                            </div>
+                        </div>
+                        <div class="shot-card">
+                            <div class="shot-number">4</div>
+                            <div class="shot-info">
+                                <div class="shot-type">Medium</div>
+                                <div class="shot-desc">Mark walks toward Jane</div>
+                            </div>
+                        </div>
+                        <div class="shot-card">
+                            <div class="shot-number">5</div>
+                            <div class="shot-info">
+                                <div class="shot-type">Two-shot</div>
+                                <div class="shot-desc">Mark approaches, Jane ignores</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Sheet -->
+                    <div style="position:absolute;bottom:60px;left:0;right:0;background:var(--bg-secondary);border-radius:var(--space-4) var(--space-4) 0 0;padding:var(--space-4);">
+                        <div style="width:40px;height:4px;background:var(--border-color);border-radius:2px;margin:0 auto var(--space-3);"></div>
+                        <button class="btn btn-primary" style="width:100%;">Confirm Shot List →</button>
+                    </div>
+
+                    <div class="bottom-nav">
+                        <button class="nav-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>
+                            Script
+                        </button>
+                        <button class="nav-item active">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/></svg>
+                            Shots
+                        </button>
+                        <button class="nav-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/></svg>
+                            Boards
+                        </button>
+                        <button class="nav-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/></svg>
+                            Breakdown
+                        </button>
+                    </div>
+
+                    <div class="home-indicator"></div>
+                </div>
+            </div>
+            <div class="screen-label"><span>5.</span> Shot List</div>
+        </div>
+
+        <!-- Screen 6: AI Suggestions -->
+        <div class="screen-wrapper">
+            <div class="iphone-frame">
+                <div class="iphone-screen">
+                    <div class="mobile-top-bar">
+                        <button class="btn" style="padding: var(--space-1);">
+                            <svg class="icon" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                        </button>
+                        <span style="font-weight:600;font-size:var(--font-size-sm);">AI Suggestions</span>
+                        <svg class="icon" viewBox="0 0 24 24" style="color:var(--accent);"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+                    </div>
+
+                    <div class="screen-content">
+                        <div style="font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:var(--space-4);">3 suggestions for Scene 1</div>
+
+                        <div style="background:var(--bg-tertiary);border:1px solid var(--accent);border-radius:var(--space-3);padding:var(--space-4);margin-bottom:var(--space-4);">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-2);">
+                                <span style="font-weight:600;font-size:var(--font-size-sm);">Suggested Shot 1</span>
+                                <span class="badge" style="background:var(--accent);color:white;">New</span>
+                            </div>
+                            <div style="font-size:var(--font-size-sm);margin-bottom:var(--space-2);">Wide Establishing Shot</div>
+                            <div style="display:flex;gap:var(--space-2);margin-bottom:var(--space-2);">
+                                <span class="badge" style="background:#dc2626;color:white;">Wide</span>
+                                <span class="badge" style="background:var(--bg-hover);">Eye Level</span>
+                            </div>
+                            <div style="font-size:var(--font-size-xs);color:var(--text-muted);margin-top:var(--space-2);padding:var(--space-2);background:var(--accent-light);border-radius:var(--space-2);">
+                                💡 Establish the coffee shop location and show Jane isolated at the corner table.
+                            </div>
+                            <div style="display:flex;gap:var(--space-2);margin-top:var(--space-3);">
+                                <button class="btn btn-primary" style="flex:1;padding:var(--space-2);font-size:var(--font-size-xs);">Accept</button>
+                                <button class="btn btn-secondary" style="padding:var(--space-2);">Edit</button>
+                            </div>
+                        </div>
+
+                        <div style="background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:var(--space-3);padding:var(--space-4);margin-bottom:var(--space-4);">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-2);">
+                                <span style="font-weight:600;font-size:var(--font-size-sm);">Suggested Shot 2</span>
+                            </div>
+                            <div style="font-size:var(--font-size-sm);margin-bottom:var(--space-2);">Medium - Character Action</div>
+                            <div style="font-size:var(--font-size-xs);color:var(--text-muted);margin-top:var(--space-2);padding:var(--space-2);background:var(--accent-light);border-radius:var(--space-2);">
+                                💡 Focus on Jane's determined expression as she types.
+                            </div>
+                            <div style="display:flex;gap:var(--space-2);margin-top:var(--space-4);">
+                                <button class="btn btn-primary" style="flex:1;">Accept All (3)</button>
+                                <button class="btn btn-secondary">🔄</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="home-indicator"></div>
+                </div>
+            </div>
+            <div class="screen-label"><span>6.</span> AI Suggestions</div>
+        </div>
+
+        <!-- Screen 7: Storyboards -->
+        <div class="screen-wrapper">
+            <div class="iphone-frame">
+                <div class="iphone-screen">
+                    <div class="mobile-top-bar">
+                        <button class="btn" style="padding: var(--space-1);">
+                            <svg class="icon" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                        </button>
+                        <span style="font-weight:600;font-size:var(--font-size-sm);">Storyboards</span>
+                        <span class="badge badge-success">5/5</span>
+                    </div>
+
+                    <div style="padding:var(--space-2) var(--space-4);background:var(--bg-secondary);">
+                        <div style="font-size:var(--font-size-xs);color:var(--text-muted);">Scene 1</div>
+                        <div style="font-size:var(--font-size-sm);font-weight:600;">INT. COFFEE SHOP - DAY</div>
+                    </div>
+
+                    <div class="screen-content">
+                        <div class="filmstrip">
+                            <div class="filmstrip-thumb selected">
+                                <img src="https://placehold.co/70x40/333/666?text=1" alt="">
+                            </div>
+                            <div class="filmstrip-thumb">
+                                <img src="https://placehold.co/70x40/333/666?text=2" alt="">
+                            </div>
+                            <div class="filmstrip-thumb">
+                                <img src="https://placehold.co/70x40/333/666?text=3" alt="">
+                            </div>
+                            <div class="filmstrip-thumb">
+                                <img src="https://placehold.co/70x40/333/666?text=4" alt="">
+                            </div>
+                            <div class="filmstrip-thumb">
+                                <img src="https://placehold.co/70x40/333/666?text=5" alt="">
+                            </div>
+                        </div>
+
+                        <div style="border-radius:var(--space-3);overflow:hidden;">
+                            <img src="https://placehold.co/280x158/333/666?text=Storyboard+1" alt="" style="width:100%;">
+                        </div>
+
+                        <div class="card" style="margin-top:var(--space-4);">
+                            <div style="display:flex;justify-content:space-between;margin-bottom:var(--space-2);">
+                                <span style="font-weight:600;font-size:var(--font-size-sm);">Shot 1: Wide</span>
+                                <span class="badge badge-success">Confirmed</span>
+                            </div>
+                            <div style="font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:var(--space-3);">Establish coffee shop, Jane at corner table</div>
+                            <div style="display:flex;gap:var(--space-2);">
+                                <button class="btn btn-primary" style="flex:1;">Edit</button>
+                                <button class="btn btn-secondary">Regenerate</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bottom-nav">
+                        <button class="nav-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>
+                            Script
+                        </button>
+                        <button class="nav-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/></svg>
+                            Shots
+                        </button>
+                        <button class="nav-item active">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/></svg>
+                            Boards
+                        </button>
+                        <button class="nav-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/></svg>
+                            Breakdown
+                        </button>
+                    </div>
+
+                    <div class="home-indicator"></div>
+                </div>
+            </div>
+            <div class="screen-label"><span>7.</span> Storyboards</div>
+        </div>
+
+        <!-- Screen 8: Character Panel -->
+        <div class="screen-wrapper">
+            <div class="iphone-frame">
+                <div class="iphone-screen">
+                    <div class="mobile-top-bar">
+                        <button class="btn" style="padding: var(--space-1);">
+                            <svg class="icon" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                        </button>
+                        <span style="font-weight:600;font-size:var(--font-size-sm);">Characters</span>
+                        <button style="background:none;border:none;color:var(--accent);">+ Add</button>
+                    </div>
+
+                    <div class="screen-content">
+                        <div class="character-item">
+                            <div class="character-avatar">J</div>
+                            <div style="flex:1;">
+                                <div style="font-size:var(--font-size-sm);font-weight:600;">JANE</div>
+                                <div style="font-size:var(--font-size-xs);color:var(--text-muted);">Protagonist • 30s • Determined</div>
+                            </div>
+                            <div style="font-size:var(--font-size-xs);color:var(--text-muted);">42 lines</div>
+                        </div>
+                        <div class="character-item">
+                            <div class="character-avatar" style="background:#f59e0b;">M</div>
+                            <div style="flex:1;">
+                                <div style="font-size:var(--font-size-sm);font-weight:600;">MARK</div>
+                                <div style="font-size:var(--font-size-xs);color:var(--text-muted);">Supporting • 30s • Conflicted</div>
+                            </div>
+                            <div style="font-size:var(--font-size-xs);color:var(--text-muted);">38 lines</div>
+                        </div>
+                        <div class="character-item">
+                            <div class="character-avatar" style="background:#22c55e;">S</div>
+                            <div style="flex:1;">
+                                <div style="font-size:var(--font-size-sm);font-weight:600;">SARAH</div>
+                                <div style="font-size:var(--font-size-xs);color:var(--text-muted);">Friend • 28s • Supportive</div>
+                            </div>
+                            <div style="font-size:var(--font-size-xs);color:var(--text-muted);">15 lines</div>
+                        </div>
+                        <div class="character-item">
+                            <div class="character-avatar" style="background:#ec4899;">C</div>
+                            <div style="flex:1;">
+                                <div style="font-size:var(--font-size-sm);font-weight:600;">CONDUCTOR</div>
+                                <div style="font-size:var(--font-size-xs);color:var(--text-muted);">Minor • 50s • Gruff</div>
+                            </div>
+                            <div style="font-size:var(--font-size-xs);color:var(--text-muted);">8 lines</div>
+                        </div>
+                    </div>
+
+                    <div class="home-indicator"></div>
+                </div>
+            </div>
+            <div class="screen-label"><span>8.</span> Characters Panel</div>
+        </div>
+
+        <!-- Screen 9: Settings -->
+        <div class="screen-wrapper">
+            <div class="iphone-frame">
+                <div class="iphone-screen">
+                    <div class="mobile-top-bar">
+                        <button class="btn" style="padding: var(--space-1);">
+                            <svg class="icon" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                        </button>
+                        <span style="font-weight:600;font-size:var(--font-size-sm);">Settings</span>
+                        <div style="width:24px;"></div>
+                    </div>
+
+                    <div class="screen-content">
+                        <div class="card">
+                            <div class="card-title">Project: The Last Train</div>
+                            <div class="card-subtitle">12 scenes • Last saved just now</div>
+                            <div style="height:4px;background:var(--bg-tertiary);border-radius:2px;margin-top:var(--space-2);">
+                                <div style="width:60%;height:100%;background:var(--accent);border-radius:2px;"></div>
+                            </div>
+                            <div style="font-size:var(--font-size-xs);color:var(--text-muted);margin-top:var(--space-2);">7 of 12 scenes confirmed</div>
+                        </div>
+
+                        <div style="font-size:var(--font-size-sm);color:var(--text-muted);margin:var(--space-4) 0 var(--space-2;">Editor</div>
+                        <div class="card" style="display:flex;justify-content:space-between;align-items:center;">
+                            <div>
+                                <div style="font-size:var(--font-size-sm);">Auto-save</div>
+                                <div style="font-size:var(--font-size-xs);color:var(--text-muted);">Every 30 seconds</div>
+                            </div>
+                            <div style="width:44px;height:24px;background:var(--accent);border-radius:12px;position:relative;">
+                                <div style="position:absolute;right:2px;top:2px;width:20px;height:20px;background:white;border-radius:50%;"></div>
+                            </div>
+                        </div>
+                        <div class="card" style="display:flex;justify-content:space-between;align-items:center;">
+                            <div>
+                                <div style="font-size:var(--font-size-sm);">Font Size</div>
+                                <div style="font-size:var(--font-size-xs);color:var(--text-muted);">16pt (100%)</div>
+                            </div>
+                            <span style="color:var(--text-muted);">→</span>
+                        </div>
+
+                        <div style="font-size:var(--font-size-sm);color:var(--text-muted);margin:var(--space-4) 0 var(--space-2);">Export</div>
+                        <button class="btn btn-secondary" style="width:100%;margin-bottom:var(--space-2);">
+                            <svg class="icon" viewBox="0 0 24 24"/><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                            Export Project (JSON)
+                        </button>
+                        <button class="btn btn-secondary" style="width:100%;">
+                            <svg class="icon" viewBox="0 0 24 24"/><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                            Export as Fountain (.txt)
+                        </button>
+
+                        <div style="font-size:var(--font-size-sm);color:var(--text-muted);margin:var(--space-4) 0 var(--space-2);">Storyboard Style</div>
+                        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:var(--space-2);">
+                            <button class="btn btn-primary" style="padding:var(--space-2);font-size:var(--font-size-xs);">Pencil</button>
+                            <button class="btn btn-secondary" style="padding:var(--space-2);font-size:var(--font-size-xs);">Ink</button>
+                            <button class="btn btn-secondary" style="padding:var(--space-2);font-size:var(--font-size-xs);">Manga</button>
+                            <button class="btn btn-secondary" style="padding:var(--space-2);font-size:var(--font-size-xs);">Watercolor</button>
+                        </div>
+                    </div>
+
+                    <div class="home-indicator"></div>
+                </div>
+            </div>
+            <div class="screen-label"><span>9.</span> Settings</div>
+        </div>
+
+        <!-- Screen 10: Scene Cards View -->
+        <div class="screen-wrapper">
+            <div class="iphone-frame">
+                <div class="iphone-screen">
+                    <div class="mobile-top-bar">
+                        <button class="btn" style="padding: var(--space-1);">
+                            <svg class="icon" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                        </button>
+                        <span style="font-weight:600;font-size:var(--font-size-sm);">Scene Cards</span>
+                        <div class="view-toggle">
+                            <button>
+                                <svg class="icon" viewBox="0 0 24 24" style="width:14px;height:14px;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>
+                            </button>
+                            <button class="active">
+                                <svg class="icon" viewBox="0 0 24 24" style="width:14px;height:14px;"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="screen-content">
+                        <div class="card">
+                            <div style="display:flex;gap:var(--space-2);margin-bottom:var(--space-2);">
+                                <svg class="scene-icon int" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                                <span style="font-size:var(--font-size-xs);color:var(--text-muted);">INT • DAY</span>
+                            </div>
+                            <div class="card-title">Scene 1: Coffee Shop</div>
+                            <div class="card-subtitle">Jane and Mark meet. Tension. Unresolved.</div>
+                            <div style="font-size:var(--font-size-xs);color:var(--text-muted);margin-top:var(--space-2);">
+                                📝 12 dialogue lines • 👥 2 characters • 📄 ~1 page
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div style="display:flex;gap:var(--space-2);margin-bottom:var(--space-2);">
+                                <svg class="scene-icon int" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                                <span style="font-size:var(--font-size-xs);color:var(--text-muted);">INT • NIGHT</span>
+                            </div>
+                            <div class="card-title">Scene 2: Jane's Apartment</div>
+                            <div class="card-subtitle">Jane alone. Contemplates next move.</div>
+                            <div style="font-size:var(--font-size-xs);color:var(--text-muted);margin-top:var(--space-2);">
+                                📝 3 dialogue lines • 👥 1 character • 📄 ~0.5 pages
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div style="display:flex;gap:var(--space-2);margin-bottom:var(--space-2);">
+                                <svg class="scene-icon ext" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
+                                <span style="font-size:var(--font-size-xs);color:var(--text-muted);">EXT • DAY</span>
+                            </div>
+                            <div class="card-title">Scene 3: Train Platform</div>
+                            <div class="card-subtitle">Jane waits. Decision point.</div>
+                            <div style="font-size:var(--font-size-xs);color:var(--text-muted);margin-top:var(--space-2);">
+                                📝 8 dialogue lines • 👥 3 characters • 📄 ~1.5 pages
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="home-indicator"></div>
+                </div>
+            </div>
+            <div class="screen-label"><span>10.</span> Scene Cards View</div>
+        </div>
+
+        <!-- Screen 11: Comments/Notes -->
+        <div class="screen-wrapper">
+            <div class="iphone-frame">
+                <div class="iphone-screen">
+                    <div class="mobile-top-bar">
+                        <button class="btn" style="padding: var(--space-1);">
+                            <svg class="icon" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                        </button>
+                        <span style="font-weight:600;font-size:var(--font-size-sm);">Notes</span>
+                        <div style="width:24px;"></div>
+                    </div>
+
+                    <div class="screen-content">
+                        <div style="display:flex;gap:var(--space-2);margin-bottom:var(--space-4);border-bottom:1px solid var(--border-color);padding-bottom:var(--space-3);">
+                            <button style="padding:var(--space-2);background:none;border:none;color:var(--accent);font-size:var(--font-size-sm);">Comments</button>
+                            <button style="padding:var(--space-2);background:none;border:none;color:var(--text-muted);font-size:var(--font-size-sm);">Versions</button>
+                        </div>
+
+                        <div style="background:var(--bg-tertiary);border-radius:var(--space-3);padding:var(--space-3);margin-bottom:var(--space-3);">
+                            <div style="display:flex;justify-content:space-between;margin-bottom:var(--space-1);">
+                                <span style="font-size:var(--font-size-sm);font-weight:600;">You</span>
+                                <span style="font-size:var(--font-size-xs);color:var(--text-muted);">2h ago</span>
+                            </div>
+                            <div style="font-size:var(--font-size-sm);color:var(--text-secondary);">Need to emphasize Jane's isolation more in shot 2. Maybe wider angle?</div>
+                        </div>
+
+                        <div style="background:var(--bg-tertiary);border-radius:var(--space-3);padding:var(--space-3);margin-bottom:var(--space-3);">
+                            <div style="display:flex;justify-content:space-between;margin-bottom:var(--space-1);">
+                                <span style="font-size:var(--font-size-sm);font-weight:600;">You</span>
+                                <span style="font-size:var(--font-size-xs);color:var(--text-muted);">Yesterday</span>
+                            </div>
+                            <div style="font-size:var(--font-size-sm);color:var(--text-secondary);">Mark's entrance should feel more intrusive. Consider low angle.</div>
+                        </div>
+
+                        <div style="background:var(--bg-tertiary);border-radius:var(--space-3);padding:var(--space-3);margin-bottom:var(--space-3);">
+                            <div style="display:flex;justify-content:space-between;margin-bottom:var(--space-1);">
+                                <span style="font-size:var(--font-size-sm);font-weight:600;">You</span>
+                                <span style="font-size:var(--font-size-xs);color:var(--text-muted);">2 days ago</span>
+                            </div>
+                            <div style="font-size:var(--font-size-sm);color:var(--text-secondary);">Scene 1 mood notes: tense, unresolved tension. Natural lighting from window.</div>
+                        </div>
+
+                        <div style="margin-top:var(--space-4);">
+                            <textarea placeholder="Add a note..." style="width:100%;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:var(--space-2);padding:var(--space-2);color:var(--text-primary);font-size:var(--font-size-sm);resize:none;" rows="2"></textarea>
+                            <button class="btn btn-primary" style="width:100%;margin-top:var(--space-2);">Add Note</button>
+                        </div>
+                    </div>
+
+                    <div class="home-indicator"></div>
+                </div>
+            </div>
+            <div class="screen-label"><span>11.</span> Notes</div>
+        </div>
+
+        <!-- Screen 12: Project List (Landing) -->
+        <div class="screen-wrapper">
+            <div class="iphone-frame">
+                <div class="iphone-screen">
+                    <div class="mobile-top-bar">
+                        <div style="width:24px;"></div>
+                        <span style="font-weight:600;font-size:var(--font-size-sm);">My Projects</span>
+                        <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                    </div>
+
+                    <div class="screen-content">
+                        <!-- New Project Card -->
+                        <div style="display:flex;gap:var(--space-3);margin-bottom:var(--space-4);">
+                            <div style="flex:1;height:100px;background:linear-gradient(135deg,var(--accent),#4f46e5);border-radius:var(--space-3);display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;">
+                                <svg class="icon" viewBox="0 0 24 24" style="width:28px;height:28px;"><path d="M12 5v14M5 12h14"/></svg>
+                                <span style="font-size:var(--font-size-sm);margin-top:var(--space-1);">New Project</span>
+                            </div>
+                            <div style="flex:1;height:100px;background:var(--bg-tertiary);border:2px dashed var(--border-color);border-radius:var(--space-3);display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                                <svg class="icon" viewBox="0 0 24 24" style="color:var(--text-muted);"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                                <span style="font-size:var(--font-size-xs);color:var(--text-muted);margin-top:var(--space-1);">Import</span>
+                            </div>
+                        </div>
+
+                        <div style="font-size:var(--font-size-sm);color:var(--text-muted);margin-bottom:var(--space-2);">Recent Projects</div>
+
+                        <div class="card" style="display:flex;gap:var(--space-3);">
+                            <div style="width:60px;height:60px;background:linear-gradient(135deg,var(--bg-tertiary),var(--bg-secondary));border-radius:var(--space-2);display:flex;align-items:center;justify-content:center;">
+                                <svg class="icon" viewBox="0 0 24 24" style="opacity:0.5;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/></svg>
+                            </div>
+                            <div style="flex:1;">
+                                <div style="font-size:var(--font-size-sm);font-weight:600;">The Last Train</div>
+                                <div style="font-size:var(--font-size-xs);color:var(--text-muted);">12 scenes • 4 min ago</div>
+                                <span class="badge badge-success" style="margin-top:var(--space-1);">Ready</span>
+                            </div>
+                        </div>
+
+                        <div class="card" style="display:flex;gap:var(--space-3);">
+                            <div style="width:60px;height:60px;background:linear-gradient(135deg,var(--bg-tertiary),var(--bg-secondary));border-radius:var(--space-2);display:flex;align-items:center;justify-content:center;">
+                                <svg class="icon" viewBox="0 0 24 24" style="opacity:0.5;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/></svg>
+                            </div>
+                            <div style="flex:1;">
+                                <div style="font-size:var(--font-size-sm);font-weight:600;">Coffee Shop Meet</div>
+                                <div style="font-size:var(--font-size-xs);color:var(--text-muted);">3 scenes • Yesterday</div>
+                                <span class="badge badge-warning" style="margin-top:var(--space-1);">Draft</span>
+                            </div>
+                        </div>
+
+                        <div class="card" style="display:flex;gap:var(--space-3);">
+                            <div style="width:60px;height:60px;background:linear-gradient(135deg,var(--bg-tertiary),var(--bg-secondary));border-radius:var(--space-2);display:flex;align-items:center;justify-content:center;">
+                                <svg class="icon" viewBox="0 0 24 24" style="opacity:0.5;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/></svg>
+                            </div>
+                            <div style="flex:1;">
+                                <div style="font-size:var(--font-size-sm);font-weight:600;">Urban Pursuit</div>
+                                <div style="font-size:var(--font-size-xs);color:var(--var(--text-muted);">8 scenes • 2 days ago</div>
+                                <span class="badge badge-success" style="margin-top:var(--space-1);">Ready</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bottom-nav">
+                        <button class="nav-item active">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+                            Projects
+                        </button>
+                        <button class="nav-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83"/></svg>
+                            Settings
+                        </button>
+                    </div>
+
+                    <div class="home-indicator"></div>
+                </div>
+            </div>
+            <div class="screen-label"><span>12.</span> Project List</div>
+        </div>
+    </div>
+
+    <footer style="text-align:center;padding:var(--space-6);color:var(--text-muted);font-size:var(--font-size-sm);">
+        Cutline — Writer-First Screenwriting Tool • Improved Design v1.1
+    </footer>
+</body>
+</html>

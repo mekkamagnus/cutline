@@ -1,0 +1,1632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cutline - Writer-First Screenwriting Tool</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Spacing Scale (8px base) */
+            --space-1: 4px;
+            --space-2: 8px;
+            --space-3: 12px;
+            --space-4: 16px;
+            --space-5: 20px;
+            --space-6: 24px;
+            --space-8: 32px;
+            --space-10: 40px;
+            --space-12: 48px;
+            --space-16: 64px;
+
+            /* Colors */
+            --bg-primary: #0f0f0f;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #242424;
+            --bg-hover: #2a2a2a;
+            --border-color: #333;
+            --border-light: #404040;
+            --text-primary: #f5f5f5;
+            --text-secondary: #a0a0a0;
+            --text-muted: #999;
+            --accent: #6366f1;
+            --accent-hover: #818cf8;
+            --accent-light: rgba(99, 102, 241, 0.2);
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --error: #ef4444;
+
+            /* Fountain Colors */
+            --fountain-scene: #fbbf24;
+            --fountain-character: #60a5fa;
+            --fountain-dialogue: #f5f5f5;
+            --fountain-parenthetical: #9ca3af;
+            --fountain-action: #f5f5f5;
+            --fountain-transition: #c084fc;
+            --fountain-shot: #fb923c;
+
+            /* Typography Scale */
+            --font-size-xs: 12px;
+            --font-size-sm: 14px;
+            --font-size-base: 16px;
+            --font-size-lg: 18px;
+            --font-size-xl: 24px;
+            --font-size-2xl: 32px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            font-size: var(--font-size-base);
+        }
+
+        .header {
+            background: rgba(15, 15, 15, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            padding: var(--space-4) var(--space-6);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .logo-tagline {
+            font-size: var(--font-size-xs);
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: var(--space-1);
+            background: var(--bg-tertiary);
+            padding: var(--space-1);
+            border-radius: var(--space-2);
+        }
+
+        .nav-tab {
+            padding: var(--space-2) var(--space-4);
+            border-radius: var(--space-2);
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            position: relative;
+        }
+
+        .nav-tab:hover {
+            color: var(--text-primary);
+        }
+
+        .nav-tab.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        /* Main Script Editor Layout */
+        .editor-container {
+            display: grid;
+            grid-template-columns: 240px 1fr 200px;
+            grid-template-rows: auto 1fr auto;
+            height: calc(100vh - 73px);
+            overflow: hidden;
+        }
+
+        /* Top Toolbar */
+        .editor-toolbar {
+            grid-column: 1 / -1;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: var(--space-3) var(--space-4);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .toolbar-left {
+            display: flex;
+            align-items: center;
+            gap: var(--space-4);
+        }
+
+        .script-title {
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+        }
+
+        .script-title input {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            width: 200px;
+        }
+
+        .script-title input:focus {
+            outline: none;
+            border-bottom: 1px solid var(--accent);
+        }
+
+        .scene-selector {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-1) var(--space-3);
+            background: var(--bg-tertiary);
+            border-radius: var(--space-2);
+            font-size: var(--font-size-xs);
+        }
+
+        .toolbar-right {
+            display: flex;
+            align-items: center;
+            gap: var(--space-4);
+        }
+
+        .page-indicator {
+            font-size: var(--font-size-xs);
+            color: var(--text-muted);
+        }
+
+        .save-status {
+            display: flex;
+            align-items: center;
+            gap: var(--space-1);
+            font-size: var(--font-size-xs);
+        }
+
+        .save-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--success);
+        }
+
+        .save-dot.unsaved {
+            background: var(--warning);
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .view-toggle {
+            display: flex;
+            background: var(--bg-tertiary);
+            border-radius: var(--space-2);
+            padding: var(--space-1);
+        }
+
+        .view-toggle button {
+            padding: var(--space-1) var(--space-3);
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            border-radius: var(--space-1);
+            cursor: pointer;
+            font-size: var(--font-size-xs);
+        }
+
+        .view-toggle button.active {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        /* Sidebars */
+        .sidebar {
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            overflow-y: auto;
+            padding: var(--space-4) 0;
+        }
+
+        .sidebar-right {
+            border-right: none;
+            border-left: 1px solid var(--border-color);
+        }
+
+        .sidebar-section {
+            padding: 0 var(--space-4) var(--space-4);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .sidebar-section:last-child {
+            border-bottom: none;
+        }
+
+        .sidebar-title {
+            font-size: var(--font-size-xs);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: var(--space-2);
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sidebar-title button {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: var(--space-1);
+        }
+
+        .sidebar-title button:hover {
+            color: var(--text-primary);
+        }
+
+        /* Scene Navigator */
+        .scene-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-1);
+        }
+
+        .scene-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-2) var(--space-3);
+            border-radius: var(--space-2);
+            cursor: pointer;
+            font-size: var(--font-size-xs);
+            transition: all 0.15s;
+            border-left: 3px solid transparent;
+        }
+
+        .scene-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .scene-item.active {
+            background: var(--accent-light);
+            color: var(--accent);
+            border-left-color: var(--accent);
+        }
+
+        .scene-icon {
+            width: var(--space-4);
+            height: var(--space-4);
+            flex-shrink: 0;
+        }
+
+        .scene-icon.int { color: var(--fountain-scene); }
+        .scene-icon.ext { color: var(--success); }
+
+        .scene-text {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .scene-number {
+            font-size: 10px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        /* Character List */
+        .character-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-1);
+        }
+
+        .character-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-1) var(--space-3);
+            border-radius: var(--space-2);
+            cursor: pointer;
+            font-size: var(--font-size-xs);
+        }
+
+        .character-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .character-avatar {
+            width: var(--space-6);
+            height: var(--space-6);
+            border-radius: 50%;
+            background: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .character-name {
+            flex: 1;
+        }
+
+        .character-count {
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        /* Main Editor Area */
+        .editor-main {
+            background: var(--bg-primary);
+            overflow-y: auto;
+            padding: var(--space-6);
+            display: flex;
+            justify-content: center;
+        }
+
+        .script-page {
+            width: 100%;
+            max-width: 850px;
+            /* Improved page boundary with better contrast and shadow */
+            background: #1e1e1e;
+            padding: var(--space-10) var(--space-16);
+            box-shadow:
+                0 4px 20px rgba(0, 0, 0, 0.4),
+                0 0 0 1px var(--border-color);
+            border-radius: var(--space-2);
+            min-height: 1100px;
+            /* Added border for better page definition */
+            border: 1px solid var(--border-color);
+            /* Position relative for line numbers */
+            position: relative;
+        }
+
+        .script-editor {
+            font-family: 'Courier Prime', 'Courier New', monospace;
+            /* Increased from 12pt to 13pt for better screen readability */
+            font-size: 13pt;
+            line-height: 1.2;
+            color: var(--fountain-dialogue);
+            white-space: pre-wrap;
+            /* Branded cursor */
+            caret-color: var(--accent);
+            /* Padding for line numbers */
+            padding-left: var(--space-8);
+        }
+
+        .script-editor:focus {
+            outline: none;
+        }
+
+        /* Fountain Element Styling */
+        .fountain-scene {
+            color: var(--fountain-scene);
+            font-weight: bold;
+            text-transform: uppercase;
+            margin: 1.5rem 0 0.75rem;
+        }
+
+        .fountain-action {
+            color: var(--fountain-action);
+            margin: 0.5rem 0;
+            /* Enforce 60ch max-width with visual guide */
+            max-width: 60ch;
+            /* Add subtle right margin for the width guide */
+            position: relative;
+        }
+
+        /* Optional column guide indicator */
+        .fountain-action::after {
+            content: '';
+            position: absolute;
+            right: -50px;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: var(--border-color);
+            opacity: 0.3;
+        }
+
+        .fountain-character {
+            color: var(--fountain-character);
+            text-align: center;
+            margin: 1.25rem 0 0;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .fountain-parenthetical {
+            color: var(--fountain-parenthetical);
+            font-style: italic;
+            text-align: center;
+            font-size: 0.95em;
+        }
+
+        .fountain-dialogue {
+            color: var(--fountain-dialogue);
+            text-align: center;
+            /* Enforce 35ch max-width for dialogue */
+            max-width: 35ch;
+            margin: 0 auto;
+        }
+
+        .fountain-transition {
+            color: var(--fountain-transition);
+            text-align: right;
+            text-transform: uppercase;
+            margin: 1rem 0;
+        }
+
+        .fountain-shot {
+            color: var(--fountain-shot);
+            text-transform: uppercase;
+        }
+
+        /* Bottom Format Bar */
+        .format-bar {
+            grid-column: 1 / -1;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            padding: var(--space-3) var(--space-4);
+            display: flex;
+            justify-content: center;
+            gap: var(--space-1);
+        }
+
+        .format-btn {
+            padding: var(--space-2) var(--space-4);
+            border-radius: var(--space-2);
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid transparent;
+            cursor: pointer;
+            font-size: var(--font-size-xs);
+            font-weight: 500;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            gap: var(--space-1);
+            min-height: 36px;
+        }
+
+        .format-btn:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .format-btn.active {
+            /* Enhanced active state with filled background */
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .format-btn .shortcut {
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-left: var(--space-1);
+            opacity: 0.7;
+        }
+
+        .format-btn.active .shortcut {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .format-divider {
+            width: 1px;
+            background: var(--border-color);
+            margin: 0 var(--space-2);
+        }
+
+        .format-right {
+            margin-left: auto;
+            display: flex;
+            gap: var(--space-2);
+        }
+
+        /* Other Screens */
+        .screen-section {
+            padding: var(--space-6);
+            display: none;
+        }
+
+        .screen-section.active {
+            display: block;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-8);
+        }
+
+        .section-title {
+            font-size: var(--font-size-2xl);
+            font-weight: 600;
+        }
+
+        .section-subtitle {
+            font-size: var(--font-size-sm);
+            color: var(--text-muted);
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--space-3);
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: var(--bg-tertiary);
+            padding: var(--space-3) var(--space-4);
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 500;
+            font-size: var(--font-size-sm);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-body {
+            padding: var(--space-4);
+        }
+
+        /* Shot Table */
+        .shot-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--font-size-sm);
+        }
+
+        .shot-table th {
+            text-align: left;
+            padding: var(--space-3);
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .shot-table td {
+            padding: var(--space-3);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .shot-table tr:hover {
+            background: var(--bg-hover);
+        }
+
+        .shot-badge {
+            display: inline-block;
+            padding: var(--space-1) var(--space-2);
+            border-radius: var(--space-1);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+        }
+
+        .badge-wide { background: #dc2626; color: white; }
+        .badge-medium { background: #f59e0b; color: white; }
+        .badge-closeup { background: #8b5cf6; color: white; }
+
+        /* Filmstrip */
+        .filmstrip {
+            display: flex;
+            gap: var(--space-3);
+            padding: var(--space-4);
+            overflow-x: auto;
+            background: var(--bg-secondary);
+            border-radius: var(--space-2);
+        }
+
+        .filmstrip-panel {
+            flex-shrink: 0;
+            width: 160px;
+            border-radius: var(--space-2);
+            overflow: hidden;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .filmstrip-panel:hover, .filmstrip-panel.selected {
+            border-color: var(--accent);
+        }
+
+        .filmstrip-panel img {
+            width: 100%;
+            aspect-ratio: 16/9;
+            object-fit: cover;
+            background: var(--bg-tertiary);
+        }
+
+        .filmstrip-panel-footer {
+            padding: var(--space-2);
+            background: var(--bg-tertiary);
+            font-size: var(--font-size-xs);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Breakdown Stats */
+        .breakdown-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--space-4);
+            margin-bottom: var(--space-8);
+        }
+
+        .stat-card {
+            background: var(--bg-tertiary);
+            border-radius: var(--space-2);
+            padding: var(--space-4);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: var(--font-size-2xl);
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            font-size: var(--font-size-xs);
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: var(--space-2) var(--space-4);
+            border-radius: var(--space-2);
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-hover);
+        }
+
+        .btn-sm {
+            padding: var(--space-1) var(--space-3);
+            font-size: var(--font-size-xs);
+        }
+
+        /* Icon */
+        .icon {
+            width: 16px;
+            height: 16px;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
+        }
+
+        /* Badge */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: var(--space-1) var(--space-2);
+            border-radius: var(--space-1);
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+        }
+
+        .badge-success { background: rgba(34, 197, 94, 0.2); color: var(--success); }
+        .badge-warning { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+
+        /* AI Suggestion */
+        .ai-suggestion {
+            background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
+            border: 1px solid var(--accent);
+            border-radius: var(--space-3);
+            padding: var(--space-4);
+            margin-bottom: var(--space-4);
+        }
+
+        .ai-suggestion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-2);
+        }
+
+        .ai-suggestion-title {
+            font-weight: 600;
+            font-size: var(--font-size-sm);
+        }
+
+        .ai-reason {
+            font-size: var(--font-size-sm);
+            color: var(--text-muted);
+            margin-top: var(--space-2);
+            padding: var(--space-2);
+            background: var(--accent-light);
+            border-radius: var(--space-2);
+        }
+
+        /* Grid Layouts */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--space-6);
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--space-4);
+        }
+
+        /* Focus Mode */
+        .editor-container.focus-mode .sidebar {
+            display: none;
+        }
+
+        .editor-container.focus-mode {
+            grid-template-columns: 1fr;
+        }
+
+        /* Zoom Controls */
+        .zoom-controls {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-1) var(--space-2);
+            background: var(--bg-tertiary);
+            border-radius: var(--space-2);
+        }
+
+        .zoom-controls button {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: var(--space-1);
+            font-size: var(--font-size-sm);
+        }
+
+        .zoom-controls button:hover {
+            color: var(--text-primary);
+        }
+
+        .zoom-level {
+            font-size: var(--font-size-xs);
+            color: var(--text-muted);
+            min-width: 40px;
+            text-align: center;
+        }
+
+        /* Platform-specific shortcuts */
+        .shortcut-mac { display: none; }
+        .shortcut-win { display: inline; }
+
+        @media (/* Apple platform detection */) {
+            .shortcut-mac { display: inline; }
+            .shortcut-win { display: none; }
+        }
+
+        /* Better line numbers */
+        .line-numbers {
+            position: absolute;
+            left: var(--space-4);
+            top: var(--space-10);
+            bottom: var(--space-10);
+            width: var(--space-6);
+            text-align: right;
+            color: var(--text-muted);
+            font-size: 10px;
+            line-height: 1.2;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">
+            <span>Cutline</span>
+            <span class="logo-tagline">Writer-First Screenwriting</span>
+        </div>
+        <div class="nav-tabs" id="mainNav">
+            <button class="nav-tab active" data-screen="editor">Script</button>
+            <button class="nav-tab" data-screen="shots">Shots</button>
+            <button class="nav-tab" data-screen="storyboards">Storyboards</button>
+            <button class="nav-tab" data-screen="breakdown">Breakdown</button>
+        </div>
+        <div style="font-size: var(--font-size-sm); color: var(--text-muted);">
+            <span class="badge badge-success">v1.0 Phase 1</span>
+        </div>
+    </header>
+
+    <!-- MAIN SCRIPT EDITOR SCREEN (Primary) -->
+    <div class="screen-section active" id="editor-screen">
+        <div class="editor-container">
+            <!-- Top Toolbar -->
+            <div class="editor-toolbar">
+                <div class="toolbar-left">
+                    <div class="script-title">
+                        <input type="text" value="The Last Train" id="scriptTitle">
+                    </div>
+                  <div class="scene-selector">
+                        <svg class="icon" viewBox="0 0 24 24"><path d="M3 4h18M3 8h18M3 12h18M3 16h18M3 20h18"/></svg>
+                        <span>Scene <strong>1</strong> of 12</span>
+                        <svg class="icon" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+                    </div>
+                </div>
+                <div class="toolbar-right">
+                    <span class="page-indicator">Page 3 of 27</span>
+                    <div class="view-toggle">
+                        <button class="active" title="Script View">
+                            <svg class="icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        </button>
+                        <button title="Scene Cards">
+                            <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/></svg>
+                        </button>
+                        <button title="Focus Mode" id="focusModeBtn">
+                            <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" style="opacity:0.3"/></svg>
+                        </button>
+                    </div>
+                    <!-- Zoom Controls -->
+                    <div class="zoom-controls">
+                        <button id="zoomOut" title="Zoom Out">
+                            <svg class="icon" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        </button>
+                        <span class="zoom-level" id="zoomLevel">100%</span>
+                        <button id="zoomIn" title="Zoom In">
+                            <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        </button>
+                    </div>
+                    <div class="save-status">
+                        <div class="save-dot" id="saveDot"></div>
+                        <span id="saveText">Saved</span>
+                    </div>
+                    <button class="btn btn-secondary btn-sm">
+                        <svg class="icon" viewBox="0 0 24 24"/><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                        Export
+                    </button>
+                </div>
+            </div>
+
+            <!-- Left Sidebar: Scene Navigator -->
+            <div class="sidebar">
+                <div class="sidebar-section">
+                    <div class="sidebar-title">
+                        Scenes
+                        <button title="Add Scene">
+                            <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                        </button>
+                    </div>
+                    <div class="scene-list">
+                        <div class="scene-item active">
+                            <svg class="scene-icon int" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                            <span class="scene-text">Coffee Shop</span>
+                            <span class="scene-number">1</span>
+                        </div>
+                        <div class="scene-item">
+                            <svg class="scene-icon int" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                            <span class="scene-text">Jane's Apartment</span>
+                            <span class="scene-number">2</span>
+                        </div>
+                        <div class="scene-item">
+                            <svg class="scene-icon ext" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                            <span class="scene-text">Train Platform</span>
+                            <span class="scene-number">3</span>
+                        </div>
+                        <div class="scene-item">
+                            <svg class="scene-icon int" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                            <span class="scene-text">Train Car</span>
+                            <span class="scene-number">4</span>
+                        </div>
+                        <div class="scene-item">
+                            <svg class="scene-icon ext" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                            <span class="scene-text">City Street</span>
+                            <span class="scene-number">5</span>
+                        </div>
+                        <div class="scene-item">
+                            <svg class="scene-icon int" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                            <span class="scene-text">Jane's Bedroom</span>
+                            <span class="scene-number">6</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="sidebar-section">
+                    <div class="sidebar-title">
+                        Script Stats
+                    </div>
+                    <div style="font-size: var(--font-size-xs); color: var(--text-muted); display: flex; flex-direction: column; gap: var(--space-1);">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Total Scenes</span>
+                            <span style="color: var(--text-primary);">12</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Characters</span>
+                            <span style="color: var(--text-primary);">6</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Locations</span>
+                            <span style="color: var(--text-primary);">8</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Est. Runtime</span>
+                            <span style="color: var(--text-primary);">~12 min</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Word Count</span>
+                            <span style="color: var(--text-primary);">8,427</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Editor Area -->
+            <div class="editor-main">
+                <div class="script-page">
+                    <!-- Optional line numbers (hidden by default) -->
+                    <div class="line-numbers" id="lineNumbers" style="display: none;">
+                        1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11<br>12<br>13<br>14<br>15
+                    </div>
+                    <div class="script-editor" contenteditable="true" spellcheck="false" id="scriptEditor">
+<span class="fountain-scene">INT. COFFEE SHOP - DAY</span>
+
+<span class="fountain-action">JANE (30s) sits at a corner table, laptop open. She types furiously, ignoring the world around her. Sunlight streams through the window behind her.</span>
+
+<span class="fountain-action">MARK (30s) approaches hesitantly from the entrance, two takeaway coffees in hand. He pauses near her table, uncertain.</span>
+
+<span class="fountain-character">MARK</span>
+<span class="fountain-parenthetical">(quietly)</span>
+<span class="fountain-dialogue">Mind if I join?</span>
+
+<span class="fountain-action">Jane doesn't look up. Her fingers keep moving across the keyboard.</span>
+
+<span class="fountain-character">JANE</span>
+<span class="fountain-action">without looking up</span>
+<span class="fountain-dialogue">It's a free country.</span>
+
+<span class="fountain-action">Mark sets down the coffees and takes the seat across from her. He watches her work for a moment.</span>
+
+<span class="fountain-character">MARK</span>
+<span class="fountain-dialogue">Jane, please. We need to talk about yesterday.</span>
+
+<span class="fountain-action">Jane stops typing. She looks up, her expression unreadable.</span>
+
+<span class="fountain-character">JANE</span>
+<span class="fountain-dialogue">There's nothing to talk about. You made your choice.</span>
+
+<span class="fountain-character">MARK</span>
+<span class="fountain-dialogue">It wasn't a choice. It was—</span>
+
+<span class="fountain-character">JANE</span>
+<span class="fountain-action">sharper</span>
+<span class="fountain-dialogue">It was a decision. You made it. Now live with it.</span>
+
+<span class="fountain-action">She returns to her typing. Mark watches her, defeated.</span>
+
+<span class="fountain-transition">CUT TO:</span>
+
+<span class="fountain-scene">INT. JANE'S APARTMENT - NIGHT</span>
+
+<span class="fountain-action">A small, sparsely furnished apartment. Boxes are stacked against one wall—semi-packed, as if she's always ready to leave but never quite does.</span>
+
+<span class="fountain-action">Jane sits on the couch, laptop closed, staring at nothing. The coffee from earlier sits untouched on the table.</span>
+
+<span class="fountain-action">Her phone buzzes. Once. Twice. She ignores it.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Sidebar: Characters & Tools -->
+            <div class="sidebar sidebar-right">
+                <div class="sidebar-section">
+                    <div class="sidebar-title">
+                        Characters
+                        <button title="Add Character">
+                            <svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                        </button>
+                    </div>
+                    <div class="character-list">
+                        <div class="character-item">
+                            <div class="character-avatar">J</div>
+                            <span class="character-name">JANE</span>
+                            <span class="character-count">42</span>
+                        </div>
+                        <div class="character-item">
+                            <div class="character-avatar" style="background: #f59e0b;">M</div>
+                            <span class="character-name">MARK</span>
+                            <span class="character-count">38</span>
+                        </div>
+                        <div class="character-item">
+                            <div class="character-avatar" style="background: #22c55e;">S</div>
+                            <span class="character-name">SARAH</span>
+                            <span class="character-count">15</span>
+                        </div>
+                        <div class="character-item">
+                            <div class="character-avatar" style="background: #ec4899;">C</div>
+                            <span class="character-name">CONDUCTOR</span>
+                            <span class="character-count">8</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="sidebar-section">
+                    <div class="sidebar-title">Current Scene</div>
+                    <div style="font-size: var(--font-size-xs); color: var(--text-muted);">
+                        <div style="margin-bottom: var(--space-2);">
+                            <span style="color: var(--text-primary);">INT. COFFEE SHOP</span>
+                        </div>
+                        <div>Characters: Jane, Mark</div>
+                        <div>Time: Day</div>
+                        <div style="margin-top: var(--space-2);">
+                            <button class="btn btn-secondary btn-sm" style="width: 100%; justify-content: center;">
+                                Add Scene Note
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="sidebar-section">
+                    <div class="sidebar-title">Quick Actions</div>
+                    <div style="display: flex; flex-direction: column; gap: var(--space-2);">
+                        <button class="btn btn-secondary btn-sm" style="justify-content: center;">
+                            <svg class="icon" viewBox="0 0 24 24"/><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                            Edit Scene
+                        </button>
+                        <button class="btn btn-secondary btn-sm" style="justify-content: center;">
+                            <svg class="icon" viewBox="0 0 24 24"/><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                            Export Scene
+                        </button>
+                        <button class="btn btn-secondary btn-sm" style="justify-content: center;" id="toggleLineNumbers">
+                            <svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+                            Line Numbers
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Format Bar -->
+            <div class="format-bar">
+                <button class="format-btn active" data-element="scene" title="Scene Heading">
+                    <span style="color: var(--fountain-scene);">●</span> Scene
+                    <span class="shortcut shortcut-mac">⌘↵</span>
+                    <span class="shortcut shortcut-win">Ctrl+Enter</span>
+                </button>
+                <button class="format-btn" data-element="action" title="Action">
+                    <span style="color: var(--fountain-action);">●</span> Action
+                    <span class="shortcut shortcut-mac">A</span>
+                    <span class="shortcut shortcut-win">A</span>
+                </button>
+                <button class="format-btn" data-element="character" title="Character">
+                    <span style="color: var(--fountain-character);">●</span> Character
+                    <span class="shortcut shortcut-mac">C</span>
+                    <span class="shortcut shortcut-win">C</span>
+                </button>
+                <button class="format-btn" data-element="dialogue" title="Dialogue">
+                    <span style="color: var(--fountain-dialogue);">●</span> Dialogue
+                    <span class="shortcut shortcut-mac">D</span>
+                    <span class="shortcut shortcut-win">D</span>
+                </button>
+                <button class="format-btn" data-element="parenthetical" title="Parenthetical">
+                    <span style="color: var(--fountain-parenthetical);">●</span> Paren.
+                    <span class="shortcut shortcut-mac">P</span>
+                    <span class="shortcut shortcut-win">P</span>
+                </button>
+                <button class="format-btn" data-element="transition" title="Transition">
+                    <span style="color: var(--fountain-transition);">●</span> Transition
+                    <span class="shortcut shortcut-mac">T</span>
+                    <span class="shortcut shortcut-win">T</span>
+                </button>
+                <div class="format-divider"></div>
+                <div class="format-right">
+                    <button class="format-btn" title="Find & Replace">
+                        <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <span class="shortcut shortcut-mac">⌘F</span>
+                        <span class="shortcut shortcut-win">Ctrl+F</span>
+                    </button>
+                    <button class="format-btn" title="Spell Check">
+                        <svg class="icon" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    </button>
+                    <button class="format-btn" title="Focus Mode" id="focusModeBtn2">
+                        <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m-9-9h6m6 0h6"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BREAKDOWN SCREEN -->
+    <div class="screen-section" id="breakdown-screen">
+        <div class="section-header">
+            <div>
+                <h1 class="section-title">Script Breakdown</h1>
+                <p class="section-subtitle">The Last Train — Automatic script analysis</p>
+            </div>
+            <button class="btn btn-secondary">
+                <svg class="icon" viewBox="0 0 24 24"/><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                Export Report
+            </button>
+        </div>
+
+        <div class="breakdown-stats">
+            <div class="stat-card">
+                <div class="stat-value">12</div>
+                <div class="stat-label">Scenes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">6</div>
+                <div class="stat-label">Characters</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">8</div>
+                <div class="stat-label">Locations</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">~12</div>
+                <div class="stat-label">Minutes</div>
+            </div>
+        </div>
+
+        <div class="grid-3">
+            <div class="card">
+                <div class="card-header">
+                    Scenes
+                    <span class="badge badge-success">12</span>
+                </div>
+                <div class="card-body">
+                    <div style="display: flex; flex-direction: column; gap: var(--space-2);">
+                        <div style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); background: var(--bg-tertiary); border-radius: var(--space-2);">
+                            <svg style="width: 14px; color: var(--fountain-scene);" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                            <span style="font-size: var(--font-size-sm);">1. Coffee Shop</span>
+                            <span style="margin-left: auto; font-size: var(--font-size-xs); color: var(--text-muted);">INT</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); background: var(--bg-tertiary); border-radius: var(--space-2);">
+                            <svg style="width: 14px; color: var(--fountain-scene);" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                            <span style="font-size: var(--font-size-sm);">2. Jane's Apartment</span>
+                            <span style="margin-left: auto; font-size: var(--font-size-xs); color: var(--text-muted);">INT</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); background: var(--bg-tertiary); border-radius: var(--space-2);">
+                            <svg style="width: 14px; color: var(--success);" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
+                            <span style="font-size: var(--font-size-sm);">3. Train Platform</span>
+                            <span style="margin-left: auto; font-size: var(--font-size-xs); color: var(--text-muted);">EXT</span>
+                        </div>
+                        <div style="text-align: center; padding: var(--space-2);">
+                            <button class="btn btn-secondary btn-sm">View All 12 Scenes</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    Characters
+                    <span class="badge badge-success">6</span>
+                </div>
+                <div class="card-body">
+                    <div style="display: flex; flex-direction: column; gap: var(--space-2);">
+                        <div style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); background: var(--bg-tertiary); border-radius: var(--space-2);">
+                            <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: var(--font-size-xs); font-weight: 600;">J</div>
+                            <span style="font-size: var(--font-size-sm);">JANE</span>
+                            <span style="margin-left: auto; font-size: var(--font-size-xs); color: var(--text-muted);">42 lines</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); background: var(--bg-tertiary); border-radius: var(--space-2);">
+                            <div style="width: 28px; height: 28px; border-radius: 50%; background: #f59e0b; display: flex; align-items: center; justify-content: center; font-size: var(--font-size-xs); font-weight: 600;">M</div>
+                            <span style="font-size: var(--font-size-sm);">MARK</span>
+                            <span style="margin-left: auto; font-size: var(--font-size-xs); color: var(--text-muted);">38 lines</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); background: var(--bg-tertiary); border-radius: var(--space-2);">
+                            <div style="width: 28px; height: 28px; border-radius: 50%; background: #22c55e; display: flex; align-items: center; justify-content: center; font-size: var(--font-size-xs); font-weight: 600;">S</div>
+                            <span style="font-size: var(--font-size-sm);">SARAH</span>
+                            <span style="margin-left: auto; font-size: var(--font-size-xs); color: var(--text-muted);">15 lines</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    Locations
+                    <span class="badge badge-success">8</span>
+                </div>
+                <div class="card-body">
+                    <div style="display: flex; flex-direction: column; gap: var(--space-2);">
+                        <div style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); background: var(--bg-tertiary); border-radius: var(--space-2);">
+                            <svg style="width: 14px; color: var(--fountain-scene);" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                            <span style="font-size: var(--font-size-sm);">Coffee Shop</span>
+                            <span style="margin-left: auto; font-size: var(--font-size-xs); color: var(--text-muted);">2 scenes</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); background: var(--bg-tertiary); border-radius: var(--space-2);">
+                            <svg style="width: 14px; color: var(--fountain-scene);" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                            <span style="font-size: var(--font-size-sm);">Jane's Apartment</span>
+                            <span style="margin-left: auto; font-size: var(--font-size-xs); color: var(--text-muted);">3 scenes</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2); background: var(--bg-tertiary); border-radius: var(--space-2);">
+                            <svg style="width: 14px; color: var(--success);" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
+                            <span style="font-size: var(--font-size-sm);">Train Platform</span>
+                            <span style="margin-left: auto; font-size: var(--font-size-xs); color: var(--text-muted);">4 scenes</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SHOTS SCREEN -->
+    <div class="screen-section" id="shots-screen">
+        <div class="section-header">
+            <div>
+                <h1 class="section-title">Shot List</h1>
+                <p class="section-subtitle">Scene 1: INT. COFFEE SHOP - DAY</p>
+            </div>
+            <div style="display: flex; gap: var(--space-2);">
+                <button class="btn btn-secondary">
+                    <svg class="icon" viewBox="0 0 24 24"/><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+                    AI Suggestions
+                </button>
+                <button class="btn btn-primary">+ Add Shot</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body" style="padding: 0;">
+                <table class="shot-table" style="border-collapse: collapse;">
+                    <thead>
+                        <tr>
+                            <th width="50">#</th>
+                            <th width="120">Type</th>
+                            <th width="100">Angle</th>
+                            <th width="100">Movement</th>
+                            <th>Characters</th>
+                            <th>Action Description</th>
+                            <th width="70">Duration</th>
+                            <th width="80"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td><span class="shot-badge badge-wide">Wide</span></td>
+                            <td>Eye level</td>
+                            <td>Static</td>
+                            <td>Jane, Mark</td>
+                            <td>Establish coffee shop, Jane at corner table</td>
+                            <td>4s</td>
+                            <td>
+                                <button class="btn btn-secondary btn-sm">✓</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td><span class="shot-badge badge-medium">Medium</span></td>
+                            <td>Eye level</td>
+                            <td>Pan right</td>
+                            <td>Jane</td>
+                            <td>Jane typing furiously on laptop</td>
+                            <td>3s</td>
+                            <td>
+                                <button class="btn btn-secondary btn-sm">✓</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td><span class="shot-badge badge-closeup">Close-up</span></td>
+                            <td>Eye level</td>
+                            <td>Static</td>
+                            <td>Jane</td>
+                            <td>Jane's focused expression, fingers on keys</td>
+                            <td>2s</td>
+                            <td>
+                                <button class="btn btn-secondary btn-sm">✓</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td><span class="shot-badge badge-medium">Medium</span></td>
+                            <td>Low angle</td>
+                            <td>Tracking</td>
+                            <td>Mark</td>
+                            <td>Mark walks toward Jane with coffees</td>
+                            <td>3s</td>
+                            <td>
+                                <button class="btn btn-secondary btn-sm">✓</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>5</td>
+                            <td><span class="shot-badge" style="background: #ec4899; color: white;">Two-shot</span></td>
+                            <td>Eye level</td>
+                            <td>Static</td>
+                            <td>Jane, Mark</td>
+                            <td>Mark approaches table, Jane ignores him</td>
+                            <td>4s</td>
+                            <td>
+                                <button class="btn btn-secondary btn-sm">✓</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div style="margin-top: var(--space-8); text-align: center;">
+            <button class="btn btn-primary" style="padding: var(--space-3) var(--space-6);">
+                ✓ Confirm Shot List & Generate Storyboards
+            </button>
+            <p style="font-size: var(--font-size-sm); color: var(--text-muted); margin-top: var(--space-2);">
+                5 shots • Est. cost: $0.01 • Est. time: ~25s
+            </p>
+        </div>
+    </div>
+
+    <!-- STORYBOARDS SCREEN -->
+    <div class="screen-section" id="storyboards-screen">
+        <div class="section-header">
+            <div>
+                <h1 class="section-title">Storyboards</h1>
+                <p class="section-subtitle">Scene 1: INT. COFFEE SHOP - DAY</p>
+            </div>
+            <div style="display: flex; gap: var(--space-2);">
+                <button class="btn btn-secondary">
+                    <svg class="icon" viewBox="0 0 24 24"/><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                    Export All
+                </button>
+            </div>
+        </div>
+
+        <div class="filmstrip">
+            <div class="filmstrip-panel selected">
+                <img src="https://placehold.co/160x90/333/666?text=Shot+1" alt="">
+                <div class="filmstrip-panel-footer">
+                    <span>1</span>
+                    <span>Wide</span>
+                </div>
+            </div>
+            <div class="filmstrip-panel">
+                <img src="https://placehold.co/160x90/333/666?text=Shot+2" alt="">
+                <div class="filmstrip-panel-footer">
+                    <span>2</span>
+                    <span>Med</span>
+                </div>
+            </div>
+            <div class="filmstrip-panel">
+                <img src="https://placehold.co/160x90/333/666?text=Shot+3" alt="">
+                <div class="filmstrip-panel-footer">
+                    <span>3</span>
+                    <span>CU</span>
+                </div>
+            </div>
+            <div class="filmstrip-panel">
+                <img src="https://placehold.co/160x90/333/666?text=Shot+4" alt="">
+                <div class="filmstrip-panel-footer">
+                    <span>4</span>
+                    <span>Med</span>
+                </div>
+            </div>
+            <div class="filmstrip-panel">
+                <img src="https://placehold.co/160x90/333/666?text=Shot+5" alt="">
+                <div class="filmstrip-panel-footer">
+                    <span>5</span>
+                    <span>2-Shot</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-2" style="margin-top: var(--space-8);">
+            <div class="card">
+                <div class="card-header">
+                    Panel 1: Wide Establishing
+                    <span class="badge badge-success">Confirmed</span>
+                </div>
+                <div class="card-body">
+                    <img src="https://placehold.co/400x225/333/666?text=Storyboard+Panel+1" alt="" style="width: 100%; border-radius: var(--space-2);">
+                    <div style="margin-top: var(--space-4); display: flex; flex-direction: column; gap: var(--space-2);">
+                        <div style="display: flex; justify-content: space-between; font-size: var(--font-size-sm);">
+                            <span style="color: var(--text-muted);">Type:</span>
+                            <span>Wide (Establishing)</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: var(--font-size-sm);">
+                            <span style="color: var(--text-muted);">Angle:</span>
+                            <span>Eye Level</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: var(--font-size-sm);">
+                            <span style="color: var(--text-muted);">Characters:</span>
+                            <span>Jane, Mark</span>
+                        </div>
+                        <div style="margin-top: var(--space-3); display: flex; gap: var(--space-2);">
+                            <button class="btn btn-primary" style="flex: 1;">Edit</button>
+                            <button class="btn btn-secondary">Regenerate</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">Shot Settings</div>
+                <div class="card-body">
+                    <div style="display: flex; flex-direction: column; gap: var(--space-4);">
+                        <div>
+                            <label style="font-size: var(--font-size-xs); color: var(--text-muted); display: block; margin-bottom: var(--space-1);">Visual Style</label>
+                            <select class="btn btn-secondary" style="width: 100%; text-align: left;">
+                                <option>Cinematic Drama</option>
+                                <option>Documentary</option>
+                                <option>Indie Film</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size: var(--font-size-xs); color: var(--text-muted); display: block; margin-bottom: var(--space-1);">Storyboard Style</label>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-2);">
+                            <button class="btn btn-primary btn-sm">Pencil</button>
+                            <button class="btn btn-secondary btn-sm">Ink</button>
+                            <button class="btn btn-secondary btn-sm">Manga</button>
+                            <button class="btn btn-secondary btn-sm">Watercolor</button>
+                          </div>
+                        </div>
+                        <div>
+                            <label style="font-size: var(--font-size-xs); color: var(--text-muted); display: block; margin-bottom: var(--space-1);">Mood</label>
+                            <select class="btn btn-secondary" style="width: 100%; text-align: left;">
+                                <option>Tense</option>
+                                <option>Warm</option>
+                                <option>Melancholic</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Navigation between screens
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const screen = tab.dataset.screen;
+
+                // Update nav tabs
+                document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                // Update screens
+                document.querySelectorAll('.screen-section').forEach(s => s.classList.remove('active'));
+                document.getElementById(screen + '-screen').classList.add('active');
+            });
+        });
+
+        // Format bar buttons
+        document.querySelectorAll('.format-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const element = btn.dataset.element;
+                document.querySelectorAll('.format-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        // Scene navigation
+        document.querySelectorAll('.scene-item').forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.scene-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+            });
+        });
+
+        // Simulate unsaved changes
+        const editor = document.getElementById('scriptEditor');
+        const saveDot = document.getElementById('saveDot');
+        const saveText = document.getElementById('saveText');
+
+        editor.addEventListener('input', () => {
+            saveDot.classList.add('unsaved');
+            saveText.textContent = 'Unsaved';
+
+            // Simulate auto-save
+            setTimeout(() => {
+                saveDot.classList.remove('unsaved');
+                saveText.textContent = 'Saved';
+            }, 2000);
+        });
+
+        // Zoom controls
+        let currentZoom = 100;
+        const zoomLevel = document.getElementById('zoomLevel');
+        const scriptEditor = document.getElementById('scriptEditor');
+        const zoomIn = document.getElementById('zoomIn');
+        const zoomOut = document.getElementById('zoomOut');
+
+        zoomIn.addEventListener('click', () => {
+            if (currentZoom < 150) {
+                currentZoom += 5;
+                updateZoom();
+            }
+        });
+
+        zoomOut.addEventListener('click', () => {
+            if (currentZoom > 75) {
+                currentZoom -= 5;
+                updateZoom();
+            }
+        });
+
+        function updateZoom() {
+            zoomLevel.textContent = currentZoom + '%';
+            scriptEditor.style.fontSize = (13 * currentZoom / 100) + 'pt';
+        }
+
+        // Focus mode
+        const focusModeBtns = [document.getElementById('focusModeBtn'), document.getElementById('focusModeBtn2')];
+        focusModeBtns.forEach(btn => {
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    document.querySelector('.editor-container').classList.toggle('focus-mode');
+                });
+            }
+        });
+
+        // Toggle line numbers
+        document.getElementById('toggleLineNumbers').addEventListener('click', () => {
+            const lineNumbers = document.getElementById('lineNumbers');
+            lineNumbers.style.display = lineNumbers.style.display === 'none' ? 'block' : 'none';
+        });
+
+        // Platform detection for shortcuts
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        if (isMac) {
+            document.documentElement.style.setProperty('--shortcut-mac-display', 'inline');
+            document.documentElement.style.setProperty('--shortcut-win-display', 'none');
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 's' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                saveDot.classList.remove('unsaved');
+                saveText.textContent = 'Saved';
+            }
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                document.querySelector('.format-btn[data-element="scene"]').click();
+            }
+            // Escape to exit focus mode
+            if (e.key === 'Escape') {
+                document.querySelector('.editor-container').classList.remove('focus-mode');
+            }
+        });
+    </script>
+</body>
+</html>
