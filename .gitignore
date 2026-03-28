@@ -1,12 +1,26 @@
 # Dependencies
 node_modules/
 .pnpm-store/
+bun.lock
 
 # Build outputs
 dist/
 build/
 .next/
 out/
+
+# TypeScript build artifacts (compiled from .ts)
+*.tsbuildinfo
+app/client/*.js
+app/client/*.js.map
+app/client/*.d.ts
+app/client/*.d.ts.map
+!app/client/vite.config.ts
+!app/client/vitest.config.ts
+!tailwind.config.js
+
+# TypeScript build artifacts
+*.tsbuildinfo
 
 # Development
 .vscode/
@@ -24,6 +38,11 @@ out/
 # Testing
 coverage/
 .nyc_output/
+
+# Database (local dev)
+data/
+*.db
+*.sqlite
 
 # Misc
 *.tgz

@@ -71,6 +71,8 @@ Video Generation (Phase 1.1+)
 | **React Router** | Client-Side Routing | 6+ |
 | **Dexie.js** | IndexedDB Wrapper | 4+ |
 | **CSS Modules** | Component Scoping | - |
+| **fp-ts** | Functional Programming (facade only) | 2.16+ |
+| **Date-fns** | Date Utilities (immutable) | 3+ |
 
 ### Why These Choices
 
@@ -85,6 +87,10 @@ Video Generation (Phase 1.1+)
 **Zustand**: Lightweight alternative to Redux. Minimal boilerplate for simple client state (UI state, selections).
 
 **Dexie.js**: Type-safe IndexedDB wrapper with Promise-based API. Simplifies complex queries and indexing.
+
+**fp-ts (facade pattern)**: Functional programming library hidden behind a facade. Provides `Option<T>`, `Result<E, T>`, `AsyncResult<E, T>` for null-safe and error-typed operations. Never imported directly outside `src/lib/fp/`.
+
+**Date-fns**: Immutable date utilities (always returns new Date). Prevents mutation bugs in scheduling features.
 
 ### Backend (Phase 2+)
 
@@ -132,19 +138,356 @@ TypeScript everywhere:
 - No `any` types in production code
 - Strict mode enabled
 
-### 5. Simplicity Over Abstraction
+### 5. Semi-Strict Functional Programming
+
+**fp-ts behind a facade pattern** for business logic:
+- **Import Rule**: Never import fp-ts directly outside `src/lib/fp/`
+- **Facade Types Only**: Use `Option<T>`, `Result<E, T>`, `AsyncResult<E, T>` from `@/lib/fp`
+- **Single Error Domain**: All operations use `AppError` with 9 error kinds
+- **Async Boundaries**: `AsyncResult.run()` only at edges (components, event handlers)
+- **Method-Style APIs**: Prefer `.map()`, `.andThen()` over `pipe()` combinators
+- **Pure Business Logic**: Services compose AsyncResult without executing
+
+```typescript
+// ✅ RIGHT - Import from facade
+import { Option, Result, AsyncResult, AppError } from '@/lib/fp';
+
+// ❌ WRONG - Direct fp-ts imports
+import { Option, some } from 'fp-ts/lib/Option';
+```
+
+### 6. Simplicity Over Abstraction
 
 YAGNI (You Aren't Gonna Need It):
 - Implement only current requirements
 - Avoid premature optimization
 - Prefer simple solutions over clever ones
 
-### 6. Local-First Privacy
+### 7. Local-First Privacy
 
 Projects stay on user's device:
 - No data sent to external servers (except AI APIs)
 - User controls their own API keys
 - Optional cloud sync (Phase 3)
+
+---
+
+## Functional Programming Architecture
+
+### FP Facade Layer Structure
+
+```
+src/lib/fp/
+├── index.ts           # Public API exports only
+├── option.ts          # Option<T> facade
+├── result.ts          # Result<E, T> facade
+├── async-result.ts    # AsyncResult<E, T> facade
+├── errors.ts          # AppError domain type
+└── __tests__/         # Facade tests (≥95% coverage)
+```
+
+### Core FP Types
+
+| Type | Purpose | Use Case |
+|------|---------|----------|
+| `Option<T>` | Nullable values | Optional properties, maybe values |
+| `Result<E, T>` | Fallible sync operations | Validation, parsing |
+| `AsyncResult<E, T>` | Fallible async operations | API calls, DB queries |
+| `AppError` | Single error domain | All error types across app |
+
+### AppError Kinds
+
+```typescript
+type AppErrorKind =
+  | 'validation'        // 400: Invalid input
+  | 'not-found'         // 404: Resource missing
+  | 'authentication'    // 401: Not logged in (Phase 2+)
+  | 'authorization'     // 403: Insufficient permissions (Phase 2+)
+  | 'rate-limit'        // 429: Too many requests
+  | 'database'          // 500: IndexedDB failure
+  | 'network'           // 503: External API unreachable
+  | 'service-unavailable' // 503: Third-party service down
+  | 'internal';         // 500: Unexpected error
+```
+
+### Layer Architecture with FP
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    EDGE LAYER (Impure)                      │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
+│  │ Components  │  │ Event       │  │ Initializer │         │
+│  │             │  │ Handlers    │  │             │         │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘         │
+└─────────┼─────────────────┼─────────────────┼────────────────┘
+          │                 │                 │
+          │ executes        │ executes        │ executes
+          ▼                 ▼                 ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   SERVICE LAYER (Pure)                       │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
+│  │ScriptParser │  │ShotListSvc  │  │StoryboardSvc│         │
+│  │- parse()    │  │- create()   │  │- generate() │         │
+│  │- breakdown()│  │- confirm()  │  │- refine()   │         │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘         │
+└─────────┼─────────────────┼─────────────────┼────────────────┘
+          │                 │                 │
+          │ composes        │ composes        │ composes
+          ▼                 ▼                 ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  ADAPTER LAYER (Impure)                      │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
+│  │IndexedDB    │  │Image Gen    │  │Fountain     │         │
+│  │Adapter      │  │Adapter      │  │Parser       │         │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘         │
+└─────────┼─────────────────┼─────────────────┼────────────────┘
+          │                 │                 │
+          │ converts to     │ converts to     │ converts to
+          ▼                 ▼                 ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    FP FACADE LAYER                           │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
+│  │ Option<T>   │  │ Result<E,T> │  │AsyncResult │         │
+│  │ - some()    │  │ - ok()      │  │ - ok()      │         │
+│  │ - fromNullable│ │ - tryCatch()│ │ - fromPromise│         │
+│  │ - map()     │  │ - map()     │  │ - run()     │         │
+│  │ - andThen() │  │ - andThen() │  │ - andThen() │         │
+│  └─────────────┘  └─────────────┘  └─────────────┘         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Common FP Patterns
+
+#### 1. Component Edge Pattern
+
+```typescript
+// React component - execute AsyncResult at edge
+export function ScriptEditor({ scriptId }: Props) {
+  const [script, setScript] = useState<Script | null>(null);
+  const [error, setError] = useState<AppError | null>(null);
+
+  useEffect(() => {
+    // Execute at edge (impure)
+    scriptService.findById(scriptId).run().then(result => {
+      result.match({
+        ok: (s) => setScript(s),
+        err: (e) => setError(e),
+      });
+    });
+  }, [scriptId]);
+
+  if (error) return <ErrorDisplay error={error} />;
+  if (!script) return <Loading />;
+  return <Editor script={script} />;
+}
+```
+
+#### 2. Service Layer Pattern
+
+```typescript
+// Pure business logic - returns AsyncResult, doesn't execute
+export class ScriptService {
+  static parseScript(
+    fountainText: string
+  ): AsyncResult<AppError, ParsedScript> {
+    return fountainParser
+      .parse(fountainText)
+      .andThen(parsed => this.extractBreakdown(parsed));
+  }
+
+  static confirmShotList(
+    sceneId: string
+  ): AsyncResult<AppError, ConfirmedShotList> {
+    return shotListAdapter
+      .findByScene(sceneId)
+      .andThen(shots => this.validateShots(shots))
+      .andThen(shots => shotListAdapter.confirm(sceneId, shots));
+  }
+}
+```
+
+#### 3. Adapter Pattern (IndexedDB)
+
+```typescript
+// Adapter converts external I/O to AsyncResult
+export class ShotListAdapter {
+  static findByScene(
+    sceneId: string
+  ): AsyncResult<AppError, Shot[]> {
+    return AsyncResult.fromPromise(
+      db.shots.where('sceneId').equals(sceneId).toArray(),
+      (e) => AppError.database('Failed to fetch shots', e)
+    );
+  }
+
+  static confirm(
+    sceneId: string,
+    shots: Shot[]
+  ): AsyncResult<AppError, void> {
+    return AsyncResult.fromPromise(
+      db.transaction('rw', db.shots, async () => {
+        await Promise.all(
+          shots.map(s => db.shots.update(s.id, { confirmed: true }))
+        );
+      }),
+      (e) => AppError.database('Failed to confirm shots', e)
+    );
+  }
+}
+```
+
+#### 4. Validation Pattern
+
+```typescript
+// Use Result.tryCatch for throwing code, Result.err for validation
+function validateShotType(input: unknown): Result<AppError, ShotType> {
+  const validTypes: ShotType[] = [
+    'wide', 'medium', 'close-up', 'extreme-cu', 'two-shot',
+    'over-the-shoulder', 'establishing', 'insert'
+  ];
+
+  if (typeof input !== 'string') {
+    return Result.err(AppError.validation(
+      'Shot type must be a string',
+      { received: typeof input }
+    ));
+  }
+
+  if (!validTypes.includes(input as ShotType)) {
+    return Result.err(AppError.validation(
+      `Invalid shot type. Must be one of: ${validTypes.join(', ')}`,
+      { received: input }
+    ));
+  }
+
+  return Result.ok(input as ShotType);
+}
+
+// Safe JSON parsing
+function parseJSON(input: string): Result<AppError, unknown> {
+  return Result.tryCatch(
+    () => JSON.parse(input),
+    (e) => AppError.validation('Invalid JSON', { original: e })
+  );
+}
+```
+
+#### 5. Error Recovery Pattern
+
+```typescript
+// Recover with fallback
+export class StoryboardService {
+  static generateWithRetry(
+    shot: Shot,
+    apiProvider: ApiProvider
+  ): AsyncResult<AppError, StoryboardPanel> {
+    return imageGenAdapter
+      .generate(shot, apiProvider)
+      .recoverWith((error) => {
+        // Try fallback API on primary failure
+        if (error.kind === 'service-unavailable' && apiProvider === 'sdxl') {
+          return imageGenAdapter.generate(shot, 'wanxiang');
+        }
+        return AsyncResult.err(error);
+      });
+  }
+}
+```
+
+#### 6. Parallel Operations Pattern
+
+```typescript
+// Use parallelCombine for independent operations
+export class ProjectService {
+  static loadProject(projectId: string): AsyncResult<AppError, LoadedProject> {
+    return projectAdapter
+      .findById(projectId)
+      .andThen(project => {
+        // Load script and shots in parallel (independent)
+        return AsyncResult.parallelCombine(
+          scriptAdapter.findByProject(projectId),
+          shotListAdapter.findAllByProject(projectId)
+        ).map(([script, shots]) => ({
+          project,
+          script,
+          shots,
+        }));
+      });
+  }
+}
+```
+
+### Error Response Mapping
+
+| AppError Kind | Display Message | Action |
+|---------------|----------------|--------|
+| `validation` | "Invalid input: {message}" | Show inline validation error |
+| `not-found` | "{resource} not found" | Show 404 state or create option |
+| `database` | "Failed to save data" | Show error, offer retry |
+| `network` | "Connection failed" | Show offline indicator |
+| `service-unavailable` | "API unavailable" | Show error, suggest retry |
+| `internal` | "Something went wrong" | Show error, log details |
+
+### FP Quick Reference
+
+```typescript
+// Import facade only
+import { Option, Result, AsyncResult, AppError } from '@/lib/fp';
+
+// Option for nullable values
+const value = Option.fromNullable(nullableValue)
+  .map(x => x.transformed)
+  .unwrapOr(defaultValue);
+
+// Result for fallible operations
+const parsed = Result.tryCatch(
+  () => JSON.parse(input),
+  (e) => AppError.validation('Invalid JSON', e)
+);
+
+// AsyncResult for async operations
+const result = await service
+  .doSomething(data)
+  .andThen(result => anotherService.process(result))
+  .run(); // Execute only at edge!
+
+// Handle result
+result.match({
+  ok: (value) => console.log('Success:', value),
+  err: (error) => console.error('Error:', error.message),
+});
+```
+
+### Anti-Patterns to Avoid
+
+```typescript
+// ❌ DON'T: Execute AsyncResult in service layer
+class BadService {
+  async process(id: string): Promise<User> {
+    const result = await this.adapter.findById(id).run(); // Wrong!
+    return result.unwrap();
+  }
+}
+
+// ✅ DO: Return AsyncResult from service
+class GoodService {
+  process(id: string): AsyncResult<AppError, User> {
+    return this.adapter.findById(id).andThen(u => this.validate(u));
+  }
+}
+
+// ❌ DON'T: Import fp-ts directly
+import { Option, some } from 'fp-ts/lib/Option';
+
+// ✅ DO: Import from facade only
+import { Option } from '@/lib/fp';
+
+// ❌ DON'T: Throw in business logic
+if (!user) throw new Error('Not found');
+
+// ✅ DO: Return error result
+if (!user) return AsyncResult.err(AppError.notFound('User'));
+```
 
 ---
 
@@ -166,7 +509,16 @@ Project
 
 ### TypeScript Type Definitions
 
+**Note**: Service methods return `AsyncResult<AppError, T>` for all operations that may fail. Use `Option<T>` for nullable values.
+
 ```typescript
+// ============================================================================
+// FP Types (import from @/lib/fp)
+// ============================================================================
+
+import { Option, Result, AsyncResult } from '@/lib/fp';
+import type { AppError } from '@/lib/fp';
+
 // ============================================================================
 // Core Types
 // ============================================================================
@@ -597,19 +949,35 @@ App
 ### Server State (TanStack Query)
 
 ```typescript
-// AI API queries
+// AI API queries - execute AsyncResult at component edge
 const generateStoryboard = useMutation({
-  mutationFn: (params: GenerationParams) =>
-    imageGenerationAPI.generate(params),
+  mutationFn: async (params: GenerationParams) => {
+    const result = await storyboardService
+      .generate(params)
+      .run();
+    // Handle result for mutation
+    if (result.isErr()) {
+      throw result.unwrapErrorOr(AppError.internal('Generation failed'));
+    }
+    return result.unwrap();
+  },
   onSuccess: (data) => {
-    // Update IndexedDB
+    // Update IndexedDB via adapter
     queryClient.invalidateQueries(['storyboards', data.shotId]);
   },
 });
 
 const getShotSuggestions = useQuery({
   queryKey: ['suggestions', sceneId],
-  queryFn: () => aiAPI.suggestShots(sceneId),
+  queryFn: async () => {
+    const result = await shotService
+      .getSuggestions(sceneId)
+      .run();
+    if (result.isErr()) {
+      throw result.unwrapErrorOr(AppError.internal('Failed to get suggestions'));
+    }
+    return result.unwrap();
+  },
   enabled: !!sceneId,
 });
 ```
@@ -639,6 +1007,92 @@ interface UIState {
   toggleSidebar: (side: "left" | "right") => void;
   setViewMode: (mode: UIState["viewMode"]) => void;
   setFocusMode: (enabled: boolean) => void;
+}
+```
+
+### Service Layer (Pure - AsyncResult Composition)
+
+```typescript
+// Services compose AsyncResult without executing
+export class ShotService {
+  static createShot(
+    sceneId: string,
+    data: ShotData
+  ): AsyncResult<AppError, Shot> {
+    return this.validateShotData(data)
+      .andThen(validated => shotListAdapter.create(sceneId, validated));
+  }
+
+  static confirmShots(
+    sceneId: string
+  ): AsyncResult<AppError, ConfirmedShotList> {
+    return shotListAdapter
+      .findByScene(sceneId)
+      .andThen(shots => this.validateShotCount(shots))
+      .andThen(shots => this.markConfirmed(sceneId, shots));
+  }
+
+  static getSuggestions(
+    sceneId: string
+  ): AsyncResult<AppError, ShotSuggestion[]> {
+    return scriptService
+      .getScene(sceneId)
+      .andThen(scene => aiService.suggestShots(scene));
+  }
+
+  private validateShotData(data: ShotData): AsyncResult<AppError, ValidatedShotData> {
+    if (!data.type || !VALID_SHOT_TYPES.includes(data.type)) {
+      return AsyncResult.err(
+        AppError.validation('Invalid shot type', { received: data.type })
+      );
+    }
+    return AsyncResult.ok(data as ValidatedShotData);
+  }
+}
+```
+
+### Adapter Layer (Impure - Converts to AsyncResult)
+
+```typescript
+// Adapters convert external I/O to AsyncResult
+export class ShotListAdapter {
+  static findByScene(
+    sceneId: string
+  ): AsyncResult<AppError, Shot[]> {
+    return AsyncResult.fromPromise(
+      db.shots.where('sceneId').equals(sceneId).toArray(),
+      (e) => AppError.database('Failed to fetch shots', e)
+    );
+  }
+
+  static create(
+    sceneId: string,
+    data: ShotData
+  ): AsyncResult<AppError, Shot> {
+    return AsyncResult.fromPromise(
+      db.shots.add({
+        id: crypto.randomUUID(),
+        sceneId,
+        ...data,
+        confirmed: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }),
+      (e) => AppError.database('Failed to create shot', e)
+    ).andThen(id => this.findById(id));
+  }
+
+  static confirm(
+    shotId: string
+  ): AsyncResult<AppError, void> {
+    return AsyncResult.fromPromise(
+      db.shots.update(shotId, {
+        confirmed: true,
+        confirmedAt: new Date().toISOString(),
+      }),
+      (e) => AppError.database('Failed to confirm shot', e)
+    );
+  }
 }
 ```
 
@@ -688,6 +1142,447 @@ Component Event Handler
           ┌──────────────┐
           │  UI Re-render │
           └──────────────┘
+```
+
+---
+
+## Service Layer (FP Patterns)
+
+All service methods follow these patterns:
+1. **Return `AsyncResult<AppError, T>`** - never execute internally
+2. **Pure business logic** - no side effects in methods
+3. **Compose adapters** - never touch IndexedDB directly
+4. **Validate before persistence** - return `validation` errors
+
+### ScriptService (`src/lib/services/script-service.ts`)
+
+```typescript
+export class ScriptService {
+  /**
+   * Parse Fountain text into structured data
+   * @returns AsyncResult<AppError, ParsedScript>
+   * - Err(validation) if Fountain format invalid
+   * - Err(internal) if parser fails unexpectedly
+   */
+  static parseScript(
+    fountainText: string
+  ): AsyncResult<AppError, ParsedScript> {
+    return Result.tryCatch(
+      () => fountainParser.parse(fountainText),
+      (e) => AppError.validation('Invalid Fountain format', e)
+    ).andThen(parsed => this.extractMetadata(parsed));
+  }
+
+  /**
+   * Get script breakdown with scenes, characters, locations
+   * @returns AsyncResult<AppError, ScriptBreakdown>
+   */
+  static getBreakdown(
+    scriptId: string
+  ): AsyncResult<AppError, ScriptBreakdown> {
+    return scriptAdapter
+      .findById(scriptId)
+      .andThen(script => this.analyzeScenes(script));
+  }
+
+  /**
+   * Update script text and re-parse
+   * @returns AsyncResult<AppError, { script: Script; parsed: ParsedScript }>
+   */
+  static updateScript(
+    scriptId: string,
+    fountainText: string
+  ): AsyncResult<AppError, { script: Script; parsed: ParsedScript }> {
+    return this.parseScript(fountainText)
+      .andThen(parsed => scriptAdapter.updateText(scriptId, fountainText)
+        .map(() => parsed)
+        .andThen(() => scriptAdapter.findById(scriptId))
+        .map(script => ({ script, parsed }))
+      );
+  }
+
+  private analyzeScenes(
+    script: Script
+  ): AsyncResult<AppError, ScriptBreakdown> {
+    const parsed = Result.tryCatch(
+      () => JSON.parse(script.parsedDataJson),
+      () => AppError.internal('Corrupted parsed data')
+    );
+
+    if (parsed.isErr()) {
+      return AsyncResult.err(parsed.unwrapErrorOr(AppError.internal('')));
+    }
+
+    const scenes = parsed.unwrap().scenes;
+    const characters = this.extractCharacters(scenes);
+    const locations = this.extractLocations(scenes);
+
+    return AsyncResult.ok({
+      scriptId: script.id,
+      scenes,
+      characters,
+      locations,
+      metadata: this.calculateMetadata(scenes),
+    });
+  }
+}
+```
+
+### ShotService (`src/lib/services/shot-service.ts`)
+
+```typescript
+export class ShotService {
+  /**
+   * Create a new shot in a scene
+   * @returns AsyncResult<AppError, Shot>
+   * - Err(validation) if shot data invalid
+   * - Err(database) if creation fails
+   */
+  static createShot(
+    sceneId: string,
+    data: ShotData
+  ): AsyncResult<AppError, Shot> {
+    return this.validateShotData(data)
+      .andThen(validated => shotAdapter.create(sceneId, validated));
+  }
+
+  /**
+   * Confirm shot list for storyboard generation
+   * @returns AsyncResult<AppError, ConfirmedShotList>
+   * - Err(validation) if shot count is 0
+   * - Err(database) if confirmation fails
+   */
+  static confirmShotList(
+    sceneId: string
+  ): AsyncResult<AppError, ConfirmedShotList> {
+    return shotAdapter
+      .findByScene(sceneId)
+      .andThen(shots => {
+        if (shots.length === 0) {
+          return AsyncResult.err(
+            AppError.validation('Cannot confirm empty shot list')
+          );
+        }
+        return AsyncResult.ok(shots);
+      })
+      .andThen(shots => this.markAllConfirmed(sceneId, shots));
+  }
+
+  /**
+   * Get AI-powered shot suggestions for a scene
+   * @returns AsyncResult<AppError, ShotSuggestion[]>
+   * - Err(network) if AI API unavailable
+   * - Err(service-unavailable) if AI API returns error
+   */
+  static getSuggestions(
+    sceneId: string
+  ): AsyncResult<AppError, ShotSuggestion[]> {
+    return scriptService
+      .getScene(sceneId)
+      .andThen(scene => this.buildSuggestionPrompt(scene))
+      .andThen(prompt => aiAdapter.generateSuggestions(prompt));
+  }
+
+  private validateShotData(
+    data: ShotData
+  ): AsyncResult<AppError, ValidatedShotData> {
+    if (!data.type || !VALID_SHOT_TYPES.includes(data.type)) {
+      return AsyncResult.err(
+        AppError.validation('Invalid shot type', { received: data.type })
+      );
+    }
+    return AsyncResult.ok(data as ValidatedShotData);
+  }
+
+  private markAllConfirmed(
+    sceneId: string,
+    shots: Shot[]
+  ): AsyncResult<AppError, ConfirmedShotList> {
+    return AsyncResult.all(
+      shots.map(shot => shotAdapter.confirm(shot.id))
+    ).map(() => ({ sceneId, shots, confirmedAt: new Date() }));
+  }
+}
+```
+
+### StoryboardService (`src/lib/services/storyboard-service.ts`)
+
+```typescript
+export class StoryboardService {
+  /**
+   * Generate storyboard panels from confirmed shots
+   * @returns AsyncResult<AppError, StoryboardPanel[]>
+   * - Err(validation) if shots not confirmed
+   * - Err(network) if image API unavailable
+   */
+  static generateForScene(
+    sceneId: string,
+    apiProvider: 'sdxl' | 'wanxiang' = 'sdxl'
+  ): AsyncResult<AppError, StoryboardPanel[]> {
+    return shotAdapter
+      .findConfirmedByScene(sceneId)
+      .andThen(shots => {
+        if (shots.length === 0) {
+          return AsyncResult.err(
+            AppError.validation('No confirmed shots found')
+          );
+        }
+        return AsyncResult.all(
+          shots.map(shot => this.generatePanel(shot, apiProvider))
+        );
+      });
+  }
+
+  /**
+   * Refine a single storyboard panel
+   * @returns AsyncResult<AppError, StoryboardPanel>
+   */
+  static refinePanel(
+    panelId: string,
+    refinementPrompt: string
+  ): AsyncResult<AppError, StoryboardPanel> {
+    return storyboardAdapter
+      .findById(panelId)
+      .andThen(panel => this.generateRefinement(panel, refinementPrompt))
+      .andThen(newPanel => storyboardAdapter.save(panelId, newPanel));
+  }
+
+  private generatePanel(
+    shot: Shot,
+    apiProvider: ApiProvider
+  ): AsyncResult<AppError, StoryboardPanel> {
+    const prompt = this.buildPrompt(shot);
+    return imageGenAdapter
+      .generate(prompt, shot, apiProvider)
+      .recoverWith(error => {
+        // Fallback to alternative API on failure
+        if (error.kind === 'service-unavailable' && apiProvider === 'sdxl') {
+          return imageGenAdapter.generate(prompt, shot, 'wanxiang');
+        }
+        return AsyncResult.err(error);
+      });
+  }
+
+  private buildPrompt(shot: Shot): GenerationPrompt {
+    return {
+      shotType: shot.type,
+      cameraAngle: shot.angle,
+      characters: shot.charactersInFrame,
+      actionDescription: shot.actionDescription,
+      style: 'pencil-sketch', // or from scene config
+    };
+  }
+}
+```
+
+## Adapter Layer (FP Patterns)
+
+All adapters follow these patterns:
+1. **Return `AsyncResult<AppError, T>`** from all methods
+2. **Use `AsyncResult.fromPromise`** to wrap external calls
+3. **Convert null to `AppError.notFound`** where appropriate
+4. **Map external errors to appropriate `AppError` kinds
+
+### IndexedDB Adapters (`src/lib/db/adapters/index.ts`)
+
+```typescript
+// Adapter converts IndexedDB operations to AsyncResult
+export class ShotAdapter {
+  static findByScene(
+    sceneId: string
+  ): AsyncResult<AppError, Shot[]> {
+    return AsyncResult.fromPromise(
+      db.shots.where('sceneId').equals(sceneId).toArray(),
+      (e) => AppError.database('Failed to fetch shots', e)
+    );
+  }
+
+  static findConfirmedByScene(
+    sceneId: string
+  ): AsyncResult<AppError, Shot[]> {
+    return AsyncResult.fromPromise(
+      db.shots
+        .where('sceneId')
+        .equals(sceneId)
+        .filter(shot => shot.confirmed)
+        .toArray(),
+      (e) => AppError.database('Failed to fetch confirmed shots', e)
+    );
+  }
+
+  static create(
+    sceneId: string,
+    data: ValidatedShotData
+  ): AsyncResult<AppError, Shot> {
+    return AsyncResult.fromPromise(
+      db.shots.add({
+        id: crypto.randomUUID(),
+        sceneId,
+        ...data,
+        confirmed: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }),
+      (e) => AppError.database('Failed to create shot', e)
+    ).andThen(id => this.findById(id));
+  }
+
+  static confirm(
+    shotId: string
+  ): AsyncResult<AppError, void> {
+    return AsyncResult.fromPromise(
+      db.shots.update(shotId, {
+        confirmed: true,
+        confirmedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }),
+      (e) => AppError.database('Failed to confirm shot', e)
+    );
+  }
+
+  static findById(
+    shotId: string
+  ): AsyncResult<AppError, Shot> {
+    return AsyncResult.fromPromise(
+      db.shots.get(shotId),
+      (e) => AppError.database('Failed to fetch shot', e)
+    ).andThen(shot => {
+      if (!shot) {
+        return AsyncResult.err(AppError.notFound('Shot', shotId));
+      }
+      return AsyncResult.ok(shot);
+    });
+  }
+}
+
+export class ScriptAdapter {
+  static findById(
+    scriptId: string
+  ): AsyncResult<AppError, Script> {
+    return AsyncResult.fromPromise(
+      db.scripts.get(scriptId),
+      (e) => AppError.database('Failed to fetch script', e)
+    ).andThen(script => {
+      if (!script) {
+        return AsyncResult.err(AppError.notFound('Script', scriptId));
+      }
+      return AsyncResult.ok(script);
+    });
+  }
+
+  static updateText(
+    scriptId: string,
+    fountainText: string
+  ): AsyncResult<AppError, Script> {
+    return AsyncResult.fromPromise(
+      db.scripts.update(scriptId, {
+        fountainText,
+        updatedAt: new Date().toISOString(),
+      }),
+      (e) => AppError.database('Failed to update script', e)
+    ).andThen(() => this.findById(scriptId));
+  }
+}
+
+export class StoryboardAdapter {
+  static findById(
+    panelId: string
+  ): AsyncResult<AppError, StoryboardPanel> {
+    return AsyncResult.fromPromise(
+      db.storyboards.get(panelId),
+      (e) => AppError.database('Failed to fetch storyboard', e)
+    ).andThen(panel => {
+      if (!panel) {
+        return AsyncResult.err(AppError.notFound('Storyboard', panelId));
+      }
+      return AsyncResult.ok(panel);
+    });
+  }
+
+  static save(
+    panelId: string,
+    panel: StoryboardPanel
+  ): AsyncResult<AppError, StoryboardPanel> {
+    return AsyncResult.fromPromise(
+      db.storyboards.put({
+        ...panel,
+        id: panelId,
+        updatedAt: new Date().toISOString(),
+      }),
+      (e) => AppError.database('Failed to save storyboard', e)
+    ).map(() => panel);
+  }
+
+  static findByShot(
+    shotId: string
+  ): AsyncResult<AppError, StoryboardPanel> {
+    return AsyncResult.fromPromise(
+      db.storyboards.where('shotId').equals(shotId).first(),
+      (e) => AppError.database('Failed to fetch storyboard', e)
+    ).andThen(panel => {
+      if (!panel) {
+        return AsyncResult.err(AppError.notFound('Storyboard for shot', shotId));
+      }
+      return AsyncResult.ok(panel);
+    });
+  }
+}
+```
+
+### AI Service Adapter (`src/lib/services/ai-service.ts`)
+
+```typescript
+export class AIAdapter {
+  /**
+   * Generate shot suggestions for a scene
+   * @returns AsyncResult<AppError, ShotSuggestion[]>
+   */
+  static generateSuggestions(
+    prompt: SuggestionPrompt
+  ): AsyncResult<AppError, ShotSuggestion[]> {
+    const apiProvider = this.getAPIProvider();
+
+    return AsyncResult.fromPromise(
+      fetch(apiProvider.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiProvider.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: apiProvider.model,
+          messages: this.buildMessages(prompt),
+        }),
+      }),
+      (e) => AppError.network('AI API request failed', e)
+    ).andThen(response => {
+      if (!response.ok) {
+        return AsyncResult.err(
+          AppError.serviceUnavailable('AI API', { status: response.status })
+        );
+      }
+      return AsyncResult.fromPromise(
+        response.json(),
+        () => AppError.internal('Failed to parse AI response')
+      );
+    }).andThen(data => this.parseSuggestions(data));
+  }
+
+  private parseSuggestions(
+    data: unknown
+  ): AsyncResult<AppError, ShotSuggestion[]> {
+    return Result.tryCatch(
+      () => {
+        const suggestions = data as { suggestions: ShotSuggestion[] };
+        return suggestions.suggestions.map(s => ({
+          ...s,
+          status: 'pending' as const,
+        }));
+      },
+      (e) => AppError.validation('Invalid AI response format', e)
+    );
+  }
+}
 ```
 
 ---
@@ -955,6 +1850,39 @@ const getErrorMessage = (error: any): string => {
 
 ## Fountain Parser Architecture
 
+### Parser Interface (FP-Aware)
+
+```typescript
+interface FountainParser {
+  /**
+   * Parse Fountain text into structured data
+   * @returns Result<AppError, ParsedScript>
+   * - Err(validation) if Fountain format invalid
+   */
+  parse(text: string): Result<AppError, ParsedScript>;
+
+  /**
+   * Get syntax highlighting tokens for editor
+   * @returns Result<AppError, HighlightToken[]>
+   * - Err(validation) if text cannot be tokenized
+   */
+  getHighlightTokens(text: string): Result<AppError, HighlightToken[]>;
+
+  /**
+   * Get scene at line number (for navigation)
+   * @returns Option<ParsedScene> - None if not found
+   */
+  getSceneAtLine(text: string, line: number): Option<ParsedScene>;
+
+  /**
+   * Parse two-column AV format
+   * @returns Result<AppError, AVParsedScript>
+   * - Err(validation) if AV format invalid
+   */
+  parseAVFormat(text: string): Result<AppError, AVParsedScript>;
+}
+```
+
 ### Parser Responsibilities
 
 1. **Parse Fountain Format**:
@@ -985,6 +1913,7 @@ const getErrorMessage = (error: any): string => {
 - `fountain-js` or similar
 - Proven, tested, handles edge cases
 - May need extension for AV format
+- Wrap in facade that returns `Result<AppError, T>`
 
 **Option 2: Custom Parser**
 - Regex-based tokenization
@@ -1903,19 +2832,162 @@ jobs:
 
 ### Testing Strategy
 
-**Unit Tests** (Vitest):
-- Component tests with React Testing Library
-- Utility function tests
-- Data transformation tests
+**Layer-by-Layer Testing with FP**:
 
-**Integration Tests**:
-- IndexedDB operations
-- Fountain parser
-- API client mocking
+| Layer | Goal | Coverage Target |
+|-------|------|-----------------|
+| FP Facade | Property laws, algebraic correctness | ≥95% |
+| Adapters | IndexedDB integration, error mapping | ≥90% |
+| Services | Business logic, pure functions | ≥95% |
+| Components | User interactions, edge execution | ≥80% |
 
-**E2E Tests** (Playwright, Phase 2):
-- Complete user workflows
-- Cross-browser testing
+#### FP Facade Tests (`src/lib/fp/__tests__/`)
+
+```typescript
+describe('Result', () => {
+  describe('map law', () => {
+    it('satisfies identity: map(x => x) === identity', () => {
+      const value = 42;
+      const result = Result.ok<AppError, number>(value);
+      expect(result.map(x => x).unwrap()).toBe(value);
+    });
+  });
+
+  describe('tryCatch', () => {
+    it('converts thrown errors to AppError', () => {
+      const result = Result.tryCatch(
+        () => JSON.parse('{invalid}'),
+        (e) => AppError.validation('Parse failed', e)
+      );
+      expect(result.isErr()).toBe(true);
+      expect(result.unwrapErrorOr(AppError.internal('')).kind).toBe('validation');
+    });
+  });
+});
+```
+
+#### Adapter Tests (`src/lib/db/__tests__/adapters.test.ts`)
+
+```typescript
+describe('ShotAdapter', () => {
+  let testDb: Database;
+
+  beforeEach(async () => {
+    testDb = await createTestDatabase();
+  });
+
+  afterEach(async () => {
+    await cleanupTestDatabase(testDb);
+  });
+
+  describe('findByScene', () => {
+    it('returns shots when found', async () => {
+      const result = await shotAdapter.findByScene('scene-1').run();
+      expect(result.isOk()).toBe(true);
+      expect(result.unwrapOr([])).toHaveLength(3);
+    });
+
+    it('returns empty array when no shots exist', async () => {
+      const result = await shotAdapter.findByScene('nonexistent').run();
+      expect(result.isOk()).toBe(true);
+      expect(result.unwrapOr([])).toHaveLength(0);
+    });
+  });
+
+  describe('confirm', () => {
+    it('marks shot as confirmed', async () => {
+      const result = await shotAdapter.confirm('shot-1').run();
+      expect(result.isOk()).toBe(true);
+
+      const verified = await shotAdapter.findById('shot-1').run();
+      expect(verified.unwrapOr({}).confirmed).toBe(true);
+    });
+  });
+});
+```
+
+#### Service Tests (`src/lib/services/__tests__/`)
+
+```typescript
+describe('ShotService', () => {
+  describe('confirmShotList', () => {
+    it('confirms valid shot list', async () => {
+      const result = await shotService
+        .confirmShotList('scene-1')
+        .run();
+
+      expect(result.isOk()).toBe(true);
+      const confirmed = result.unwrapOr(null);
+      expect(confirmed?.shots.every(s => s.confirmed)).toBe(true);
+    });
+
+    it('returns validation error for empty list', async () => {
+      const result = await shotService
+        .confirmShotList('empty-scene')
+        .run();
+
+      expect(result.isErr()).toBe(true);
+      expect(result.unwrapErrorOr(AppError.internal('')).kind).toBe('validation');
+    });
+  });
+
+  describe('createShot', () => {
+    it('validates shot type', async () => {
+      const result = await shotService
+        .createShot('scene-1', { type: 'invalid-type' as ShotType })
+        .run();
+
+      expect(result.isErr()).toBe(true);
+      const error = result.unwrapErrorOr(AppError.internal(''));
+      expect(error.kind).toBe('validation');
+    });
+  });
+});
+```
+
+#### Component Tests (`src/components/__tests__/`)
+
+```typescript
+describe('ShotListEditor', () => {
+  it('executes AsyncResult at component edge', async () => {
+    const { result } = renderHook(() =>
+      useServiceCall(shotService.confirmShotList, 'scene-1')
+    );
+
+    // Wait for AsyncResult execution
+    await waitFor(() => expect(result.current).toBeDefined());
+
+    // Assert Result type
+    expect(result.current.isOk()).toBe(true);
+    expect(result.current.unwrapOr(null)?.shots).toBeDefined();
+  });
+
+  it('handles errors gracefully', async () => {
+    const { result } = renderHook(() =>
+      useServiceCall(shotService.confirmShotList, 'invalid-scene')
+    );
+
+    await waitFor(() => expect(result.current).toBeDefined());
+
+    expect(result.current.isErr()).toBe(true);
+    // Component should display error message
+  });
+});
+
+// Custom hook for AsyncResult execution in components
+function useServiceCall<T>(
+  serviceFn: () => AsyncResult<AppError, T>,
+  deps: unknown[]
+): AsyncResult<AppError, T> {
+  const [result, setResult] = useState<AsyncResult<AppError, T> | null>(null);
+
+  useEffect(() => {
+    serviceFn().run().then(setResult);
+  }, deps);
+
+  return result ?? AsyncResult.err(AppError.internal('Not initialized'));
+}
+```
 
 ---
 

@@ -1,0 +1,123 @@
+# Cutline Implementation Progress - Lessons Learned
+
+Last Updated: 2026-03-28
+
+## Purpose
+
+This file captures **lessons learned** at the completion of each user story / feature.
+For feature status and acceptance criteria tracking, see `prd.json`.
+
+---
+
+## Phase 1: Foundation Infrastructure
+
+**Completed**: 2026-03-28
+
+### What Went Well
+
+1. **FP Facade Pattern**: Wrapping fp-ts behind a clean facade (`src/lib/fp/`) worked excellently
+   - Single import point prevents direct fp-ts usage
+   - AppError domain unifies all error types
+   - AsyncResult composition is intuitive at service layer
+   - Tests drive the API design naturally
+
+2. **Type-First Development**: Defining all types upfront (`src/types/index.ts`)
+   - Caught design issues early
+   - Served as living documentation
+   - Made test writing easier
+   - Confirmed shot `confirmed` field is central to paradigm
+
+3. **Test Utilities Early**: Creating test helpers (`src/test-utils/`) before services
+   - Made TDD frictionless
+   - Assertion helpers for Result/Option improve test readability
+   - Factory functions for test entities
+
+### Challenges
+
+1. **Flaky Async Test**: `AsyncResult.zip` timing test
+   - Issue: Expects <100ms but takes ~238ms on some runs
+   - Root cause: CI/test environment variability
+   - Solution: Increase threshold to 300ms or use fake timers
+   - Lesson: Avoid strict timing assertions; use ranges or mock time
+
+2. **noUncheckedIndexedAccess**: TypeScript strictness caught potential undefined issues
+   - Good for safety, but requires more explicit handling
+   - Lesson: Worth the extra typing for runtime safety
+
+### Key Decisions
+
+| Decision | Rationale | Outcome |
+|----------|-----------|---------|
+| fp-ts behind facade | Prevent direct imports, unified error domain | ✅ Clean API, enforced by convention |
+| Dexie for IndexedDB | Type-safe, better DX than raw IndexedDB | ✅ Good choice, Phase 2 will validate |
+| Zustand + TanStack Query | UI state vs server state separation | ✅ Clear separation of concerns |
+| Vite + PWA plugin | Fast dev, built-in PWA support | ✅ Excellent DX |
+
+### Patterns to Continue
+
+- Write tests before implementation (TDD)
+- Define types before code
+- Single error domain (AppError)
+- Facade pattern for external libraries
+- Test utilities as first-class citizens
+
+### Patterns to Avoid
+
+- Strict timing assertions in tests
+- Direct imports from fp-ts
+- Multiple error type hierarchies
+
+---
+
+## Phase 2: Data Layer
+
+**Status**: Not Started
+
+### Lessons Learned
+
+*To be filled after completion*
+
+---
+
+## Template for New Entries
+
+When completing a feature/user story, add:
+
+```
+## [Feature Name]
+
+**Completed**: YYYY-MM-DD
+**PRD Reference**: Feature #X.X
+
+### What Went Well
+- [Things that worked]
+
+### Challenges
+- [Problems encountered and solutions]
+
+### Key Decisions
+| Decision | Rationale | Outcome |
+|----------|-----------|---------|
+| ... | ... | ✅/⚠️/❌ |
+
+### Patterns to Continue
+- [Successful patterns]
+
+### Patterns to Avoid
+- [Anti-patterns discovered]
+
+### Code References
+- Key files: [list important files]
+- Tests: [test file locations]
+```
+
+---
+
+## Quick Reference
+
+| File | Purpose |
+|------|---------|
+| `prd.json` | Feature status, acceptance criteria, tracking |
+| `progress.txt` | Lessons learned, retrospective notes |
+| `docs/prd.md` | Full PRD with user stories |
+| `docs/architecture.md` | Technical architecture decisions |

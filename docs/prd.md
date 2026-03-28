@@ -812,11 +812,11 @@ Video Generation (via API)
 
 **Frontend**: React + TypeScript, Vite, TanStack (Query/Zustand)
 **MVP Storage**: IndexedDB, browser File System API
-**Backend (Phases 2+)**: Bun + Elysium + SQLite
+**Backend (Phases 2+)**: Node + Elysia + SQLite
 
 **Rationale**:
 - Browser-only MVP for faster development and validation
-- Bun + Elysium + SQLite for lightweight, type-safe backend when needed
+- Node + Elysia + SQLite for lightweight, type-safe backend when needed
 - TanStack for excellent API state management
 - TypeScript everywhere for type safety
 
@@ -872,6 +872,7 @@ Video Generation (via API)
 - **Styling**: CSS Modules or Tailwind CSS
 - **State Management**: TanStack (Query for API calls, simple Zustand for local state if needed)
 - **UI Components**: Consider shadcn/ui or Radix UI for accessible components
+- **Functional Programming**: fp-ts behind facade pattern (see docs/fp-*.md)
 
 **MVP (Phase 1) - Browser Only**:
 - **Data Storage**: IndexedDB (via Dexie.js or similar) for project data
@@ -880,10 +881,47 @@ Video Generation (via API)
 - **Authentication**: None (local-only)
 
 **Phase 2+ - Backend (when cloud features needed)**:
-- **Runtime**: Bun
-- **Web Framework**: Elysium
+- **Runtime**: Node.js
+- **Web Framework**: Elysia
 - **Database**: SQLite (via better-sqlite3 or similar)
 - **Authentication**: Will determine when needed (likely JWT-based)
+
+### Functional Programming Workflow
+
+**fp-ts Facade Pattern**: Business logic uses functional programming patterns for type-safe error handling and null safety:
+
+```typescript
+// ✅ RIGHT - Import from facade only
+import { Option, Result, AsyncResult, AppError } from '@/lib/fp';
+
+// Service layer - pure composition, returns AsyncResult
+class ShotListService {
+  static confirmShots(sceneId: string): AsyncResult<AppError, ConfirmedShots> {
+    return shotListAdapter.findByScene(sceneId)
+      .andThen(shots => this.validateShotCount(shots))
+      .andThen(shots => shotListAdapter.confirm(sceneId, shots));
+  }
+}
+
+// Component edge - execute AsyncResult at boundaries
+function ShotListConfirmButton({ sceneId }: Props) {
+  const handleClick = async () => {
+    const result = await ShotListService.confirmShots(sceneId).run();
+    result.match({
+      ok: (confirmed) => onConfirm(confirmed),
+      err: (error) => showError(error.message),
+    });
+  };
+}
+```
+
+**Key Principles**:
+- **Never import fp-ts directly** outside `src/lib/fp/` facade
+- **AsyncResult.run() only at edges** (components, event handlers)
+- **Services return AsyncResult** for composable business logic
+- **Single error domain**: All operations use `AppError` type
+
+See `docs/fp-quick-start.md` for common patterns and `docs/fp-anti-patterns.md` for mistakes to avoid.
 
 ### Architecture Decisions
 
@@ -893,9 +931,9 @@ Video Generation (via API)
 - Privacy-friendly (projects stay local)
 - Can validate core workflow before investing in backend
 
-**Why Bun + Elysium + SQLite for Backend?**
-- **Bun**: Fast, all-in-one toolkit (runtime, test runner, bundler)
-- **Elysium**: Modern, type-safe web framework for Bun
+**Why Node + Elysia + SQLite for Backend?**
+- **Node.js**: Mature runtime with vast ecosystem and LTS support
+- **Elysia**: Modern, type-safe web framework with excellent TypeScript support
 - **SQLite**: Lightweight, embedded database (easy hosting, no separate DB server)
 - **TypeScript everywhere**: End-to-end type safety
 

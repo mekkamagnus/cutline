@@ -1,0 +1,620 @@
+{
+  "project": {
+    "name": "Cutline",
+    "version": "0.1.0",
+    "phase": "Phase 1 MVP",
+    "description": "Script to video platform for filmmakers"
+  },
+  "paradigm": {
+    "name": "Shot-List-First",
+    "description": "The confirmed shot list is the specification for storyboard generation",
+    "rules": [
+      "AI suggests shots",
+      "Director edits shots",
+      "Director confirms shot list",
+      "AI generates storyboards from confirmed shots only"
+    ]
+  },
+  "architecture": {
+    "frontend": {
+      "framework": "React + TypeScript",
+      "buildTool": "Vite",
+      "stateManagement": "TanStack Query + Zustand",
+      "styling": "CSS Modules with design tokens",
+      "functionalProgramming": "fp-ts behind facade pattern",
+      "storage": "IndexedDB via Dexie.js"
+    },
+    "backend": {
+      "phase1": "Browser-only (no backend)",
+      "phase2plus": {
+        "runtime": "Node.js",
+        "framework": "Elysia",
+        "database": "SQLite",
+        "authentication": "JWT-based (TBD)"
+      }
+    },
+    "rationale": {
+      "browserOnlyMVP": "Faster development, lower complexity, privacy-friendly, validates workflow before backend investment",
+      "nodeElysiaSQLite": "Node.js mature ecosystem with LTS support, Elysia type-safe with excellent TypeScript, SQLite lightweight and embedded"
+    }
+  },
+  "features": {
+    "1": {
+      "name": "Script Input & Parsing",
+      "phase": "Phase 1",
+      "status": "not_started",
+      "userStory": "As a filmmaker, I want to upload or paste a script in Fountain format so that the AI can automatically recognize and organize its elements.",
+      "acceptanceCriteria": [
+        "Accept Fountain format script input (paste or file upload)",
+        "Parse and identify scenes (scene headings, sluglines)",
+        "Parse and identify characters",
+        "Parse and identify dialogue",
+        "Parse and identify action lines",
+        "Parse and identify transitions",
+        "Parse and identify parentheticals",
+        "Display parsed structure in organized, navigable format",
+        "Handle common Fountain format variations"
+      ]
+    },
+    "1.5": {
+      "name": "Script Editor",
+      "phase": "Phase 1",
+      "status": "not_started",
+      "userStory": "As a filmmaker, I want to write and edit scripts directly in the application so that I can work on my screenplay without switching tools.",
+      "acceptanceCriteria": [
+        "In-app Fountain format script editor with syntax highlighting",
+        "Auto-formatting as you type (sluglines, character names, dialogue)",
+        "Fountain format autocomplete",
+        "Scene heading detection and formatting",
+        "Character name caching and autocomplete",
+        "Standard screenplay formatting (Courier font, proper margins/spacing)",
+        "AV Format Support: Two-column script format (Video | Audio columns)",
+        "Keyboard shortcuts for common script elements (Tab for character, Enter for dialogue, etc.)",
+        "Word count and page count estimation",
+        "Save indicator for unsaved changes",
+        "Responsive design: editing works on desktop, tablet, and mobile"
+      ]
+    },
+    "1.6": {
+      "name": "Script Breakdown & Analysis",
+      "phase": "Phase 1",
+      "status": "not_started",
+      "userStory": "As a filmmaker, I want to see my script automatically broken down into its constituent elements so that I can understand and organize the production requirements.",
+      "acceptanceCriteria": [
+        "Extract scenes: All scene headings with line numbers, INT/EXT classification",
+        "Extract characters: All speaking characters with dialogue counts and scene appearances",
+        "Extract locations: All unique locations grouped by interior/exterior",
+        "Extract props: Key props mentioned in action lines (AI-detected)",
+        "Extract time of day: Day/night/dawn/dusk classification per scene",
+        "Extract transitions: All transitions between scenes",
+        "Visual breakdown dashboard with scene list, character roster, location list",
+        "Script statistics (total scenes, characters, locations, estimated duration)",
+        "Click-through navigation: click any element to jump to its location in script",
+        "Export breakdown as CSV or PDF",
+        "Scene metadata editing: add notes, tags, and production status",
+        "Integration with Shot List: Characters and locations available as dropdowns"
+      ]
+    },
+    "1.7": {
+      "name": "Shot List Editor",
+      "phase": "Phase 1",
+      "status": "not_started",
+      "userStory": "As a filmmaker, I want to define shots for each scene so that the AI knows exactly what storyboards to generate.",
+      "acceptanceCriteria": [
+        "Per-scene shot list editor with tabular interface",
+        "Shot Number: Sequential (1, 2, 3...)",
+        "Shot Type: Wide / Medium / Close-up / Extreme CU / Two-shot / Over-the-shoulder / Establishing / Insert",
+        "Camera Angle: Eye level / High angle / Low angle / Dutch angle / Bird's eye / Worm's eye",
+        "Camera Movement: Static / Pan / Tilt / Dolly / Truck / Pedestal / Arc / Handheld / Steadicam",
+        "Characters in Frame: Select from script's character roster",
+        "Action Description: Brief description of what happens in shot",
+        "Duration: Suggested length (seconds)",
+        "Notes: Director's additional notes",
+        "Keyboard shortcuts: Tab to next field, Enter to add new shot, Ctrl+Z undo",
+        "Copy/duplicate shot functionality",
+        "Reorder shots (drag and drop or move up/down buttons)",
+        "Delete shot with confirmation",
+        "Shot count display per scene",
+        "Auto-save shot list changes"
+      ]
+    },
+    "1.8": {
+      "name": "AI-Assisted Shot Suggestions",
+      "phase": "Phase 1",
+      "status": "not_started",
+      "userStory": "As a filmmaker, I want the AI to suggest appropriate shots for my scenes so that I have a starting point rather than starting from blank.",
+      "acceptanceCriteria": [
+        "AI analyzes scene content and suggests initial shot list",
+        "Dialogue scenes: Suggest establishing wide, two-shot medium, close-ups on speaking characters",
+        "Action scenes: Suggest dynamic coverage with multiple angles",
+        "Montage sequences: Suggest quick-cut shots with variety",
+        "Reveal moments: Suggest specific close-up or insert shots",
+        "AI provides reasoning for each suggestion",
+        "Director can accept all suggestions",
+        "Director can accept individual shots",
+        "Director can edit any suggested shot",
+        "Director can delete suggestions and add own shots",
+        "Regenerate suggestions button with different prompt options",
+        "Suggestions use scene context (characters, location, mood from breakdown)"
+      ]
+    },
+    "1.9": {
+      "name": "Shot List Confirmation",
+      "phase": "Phase 1",
+      "status": "not_started",
+      "priority": "critical",
+      "paradigm": true,
+      "userStory": "As a filmmaker, I want to explicitly confirm my shot list before AI generation so that I don't waste credits on unwanted storyboards.",
+      "acceptanceCriteria": [
+        "Review mode showing all shots in the scene",
+        "Summary statistics: shot count, estimated storyboard generation cost",
+        "Confirm Shot List button that locks the shot list",
+        "Confirm enables AI storyboard generation for this scene",
+        "Confirm shows confirmation with estimated cost",
+        "Unlock for Editing button to make changes after confirmation",
+        "Visual indicator showing confirmed vs. unconfirmed scenes",
+        "Bulk confirmation: confirm multiple scenes at once"
+      ]
+    },
+    "1.10": {
+      "name": "Local Collaboration Features",
+      "phase": "Phase 1",
+      "status": "not_started",
+      "userStory": "As a filmmaker, I want to add notes and track changes without cloud sync so that I can iterate on my script locally.",
+      "acceptanceCriteria": [
+        "Add notes to scenes, storyboards, characters, and shots",
+        "Inline comments on script text",
+        "Per-scene notes panel",
+        "Per-shot notes in shot list",
+        "Save Version with name and description",
+        "View version list with timestamps",
+        "Restore any previous version",
+        "Compare versions (see what changed)",
+        "Toggle track changes mode",
+        "See who changed what (local user only for Phase 1)",
+        "Accept or reject individual changes",
+        "All collaboration data stored locally (IndexedDB)"
+      ]
+    },
+    "1.11": {
+      "name": "Progressive Web App",
+      "phase": "Phase 1",
+      "status": "partial",
+      "userStory": "As a filmmaker, I want to install Cutline as an app and work offline so that I can write and plan anywhere.",
+      "acceptanceCriteria": [
+        "Installable PWA (Add to Home Screen on mobile/desktop)",
+        "Offline mode: full functionality available without internet",
+        "Background sync when connection restored",
+        "Desktop editing (full keyboard shortcuts, multi-panel)",
+        "Tablet editing (touch-optimized, responsive panels)",
+        "Mobile editing (simplified interface, still fully functional)",
+        "Local data persistence (IndexedDB) with export/import backup"
+      ]
+    },
+    "2": {
+      "name": "Script-Level Configuration",
+      "phase": "Phase 1.1",
+      "status": "not_started",
+      "userStory": "As a filmmaker, I want to define overall visual style and settings at the script level so that the AI generates storyboards that match my creative vision from the start.",
+      "acceptanceCriteria": [
+        "Configure overall visual style (cinematic, documentary, animation, etc.)",
+        "Configure color palette preferences",
+        "Configure tone/mood (dark, lighthearted, suspenseful, etc.)",
+        "Create character profiles with text descriptions",
+        "Include: age, physical traits, clothing style, typical expressions, personality notes",
+        "AI generates visual reference images from character descriptions",
+        "Director approves or refines generated reference images",
+        "Approved references used for consistent character rendering across all storyboards",
+        "Script-level settings inform AI's initial storyboard generation"
+      ]
+    },
+    "3": {
+      "name": "Scene-Level Configuration",
+      "phase": "Phase 1.1",
+      "status": "not_started",
+      "userStory": "As a filmmaker, I want to define scene-specific visual style and setting details so that all storyboards within that scene maintain consistency.",
+      "acceptanceCriteria": [
+        "Configure location/set description (environment details)",
+        "Configure mood/atmosphere (tense, warm, eerie, etc.)",
+        "Configure lighting style (harsh, soft, golden hour, etc.)",
+        "Configure color palette adjustments (override script defaults if needed)",
+        "Configure overall visual style/tone for this scene",
+        "Scene-level settings apply as defaults to all storyboards in that scene",
+        "Ability to override scene defaults at individual storyboard level"
+      ]
+    },
+    "4": {
+      "name": "Storyboard-Level Configuration",
+      "phase": "Phase 1.1",
+      "status": "not_started",
+      "userStory": "As a filmmaker, I want to control specific shot details for each storyboard panel so that I can direct the visual narrative precisely.",
+      "acceptanceCriteria": [
+        "Configure shot composition (camera angles, framing, movement)",
+        "Configure character appearance and positioning",
+        "Configure character expressions and emotions",
+        "Configure specific camera movements within the shot",
+        "Inherit scene-level defaults by default",
+        "Override scene defaults when needed",
+        "Preview/visualize storyboard panel configuration"
+      ]
+    },
+    "5": {
+      "name": "Image Generation API Integration",
+      "phase": "Phase 1",
+      "status": "not_started",
+      "userStory": "As a filmmaker, I want to choose between multiple image generation APIs so that I can optimize for cost, quality, and regional availability.",
+      "acceptanceCriteria": [
+        "Primary API - SDXL: Lowest cost (~$0.002/image)",
+        "Primary API - SDXL: Good quality for storyboard aesthetics",
+        "Primary API - SDXL: Best for international users",
+        "Primary API - SDXL: Multiple style LoRAs available",
+        "Secondary API - Wan2.6: Excellent for China-based users",
+        "Secondary API - Wan2.6: Superior text rendering and layout control",
+        "Secondary API - Wan2.6: Native sketch/line art control via ControlNet",
+        "Secondary API - Wan2.6: Pricing ~¥0.20/image (~$0.028)",
+        "User can choose default API at project level",
+        "Per-scene API override option",
+        "Auto-select based on user region (China → Wan2.6, International → SDXL)",
+        "Both APIs support sketch/illustrated/manga aesthetics",
+        "Style prompts adapted per API",
+        "Character reference system works with both APIs",
+        "Automatic retry with alternative API if primary fails",
+        "Rate limit handling and queuing",
+        "Clear error messages if API unavailable",
+        "Show estimated cost before generating storyboards",
+        "Track API usage and costs per project",
+        "Budget warnings (optional threshold)"
+      ],
+      "implementationNotes": [
+        "Use Replicate API for SDXL",
+        "Use Alibaba Cloud DashScope API for Wan2.6",
+        "Abstraction layer for easy addition of future APIs"
+      ]
+    },
+    "6": {
+      "name": "AI Storyboard Generation",
+      "phase": "Phase 1",
+      "status": "not_started",
+      "priority": "critical",
+      "paradigm": true,
+      "userStory": "As a filmmaker, I want the AI to generate storyboard panels based on my confirmed shot list so that I get visual representations of my planned shots.",
+      "acceptanceCriteria": [
+        "REQUIRES confirmed shot list (Feature #1.9)",
+        "For each confirmed shot, generates ONE storyboard panel",
+        "Shot Type influences framing and composition",
+        "Camera Angle influences perspective in generated image",
+        "Camera Movement hints at motion within static image",
+        "Characters in Frame ensures correct characters appear",
+        "Action Description is main prompt content",
+        "Visual Style: Static AI images with sketch/illustrated/manga aesthetic",
+        "Style options: Pencil sketch, Ink drawing, Manga/comic, Watercolor storyboard",
+        "Style selection at script or scene level",
+        "Consistent style within a scene",
+        "Progress indicator: Generating storyboard X of Y for Scene Z",
+        "Cost tracking: show API cost per panel and running total",
+        "Batch generation: generate all storyboards for a scene at once",
+        "Individual regeneration: regenerate specific panels after viewing",
+        "Fast generation (~2-5 seconds per panel)"
+      ]
+    },
+    "7": {
+      "name": "Storyboard Refinement",
+      "phase": "Phase 1",
+      "status": "not_started",
+      "userStory": "As a filmmaker, I want to selectively edit individual storyboard panels with targeted prompts so that I can refine the AI's rough drafts without starting from scratch.",
+      "acceptanceCriteria": [
+        "Each storyboard panel has an Edit button",
+        "Edit mode opens prompt input for that specific panel",
+        "Director enters refinement prompt",
+        "AI regenerates that single panel based on prompt",
+        "Previous version saved (undo/redo capability)",
+        "Non-destructive editing (can always revert to rough draft)"
+      ]
+    },
+    "8": {
+      "name": "Video Generation - Scene Level",
+      "phase": "Phase 1.1",
+      "status": "not_started",
+      "userStory": "As a filmmaker, I want to generate video clips for all storyboard panels in a scene at once so that I can efficiently create the visual content for that scene.",
+      "acceptanceCriteria": [
+        "Select a scene and click Generate Video",
+        "Generates individual video clips for each storyboard panel in that scene",
+        "Batch processing for efficiency",
+        "Progress indicator showing which panels are complete",
+        "Generated clips are organized by scene and panel",
+        "Video generation parameters can be set at scene level",
+        "Duration per clip configurable",
+        "Motion intensity (subtle to dynamic) configurable",
+        "Resolution/quality settings configurable",
+        "Store generation metadata (API used, parameters, timestamp) for reproducibility"
+      ]
+    },
+    "9": {
+      "name": "Video Generation - Panel Preview",
+      "phase": "Phase 2",
+      "status": "not_started",
+      "userStory": "As a filmmaker, I want to generate a single storyboard panel into video so that I can preview how it will look before committing to generating the full scene.",
+      "acceptanceCriteria": [
+        "Preview Video button on individual storyboard panels",
+        "Generates video for that single panel only",
+        "Uses same scene-level generation parameters",
+        "Faster feedback for iterative refinement",
+        "Can regenerate panel with different prompts/settings"
+      ]
+    },
+    "10": {
+      "name": "Video Export & Assembly",
+      "phase": "Phase 2",
+      "status": "not_started",
+      "userStory": "As a filmmaker, I want to export my generated video clips so that I can use them in post-production or share them.",
+      "acceptanceCriteria": [
+        "Export individual video clips per storyboard panel (primary)",
+        "Download as organized folder structure",
+        "Include metadata file with generation details",
+        "Future phase: Assemble full video with transitions",
+        "Export options: resolution, frame rate, format (MP4, etc.)"
+      ]
+    },
+    "11": {
+      "name": "Video Generation API Integration",
+      "phase": "Phase 1.1",
+      "status": "not_started",
+      "userStory": "As a filmmaker, I want to select from multiple video generation APIs so that I can choose the best option for my needs (cost, quality, speed).",
+      "acceptanceCriteria": [
+        "Support RunwayML (Gen-2/Gen-3)",
+        "Support Pika Labs",
+        "Support Stability AI",
+        "Easy to add new integrations",
+        "API selection at project or scene level",
+        "Display API status (available, rate limits, costs if known)",
+        "Prototype phase: Implement with easiest/cheapest option first",
+        "Fallback/error handling if API is unavailable"
+      ]
+    },
+    "12": {
+      "name": "Project Saving & Auto-Save",
+      "phase": "Phase 1",
+      "status": "not_started",
+      "userStory": "As a filmmaker, I want my work to be automatically saved locally so that I don't lose progress if I accidentally close the browser.",
+      "acceptanceCriteria": [
+        "Auto-save to local storage (browser IndexedDB)",
+        "Save all project data: script, breakdown, shot lists, configurations, storyboards, generated assets, comments, versions",
+        "Auto-save every 30 seconds or on significant changes",
+        "Manual Save button for immediate save",
+        "Save As to create new project file",
+        "Visual indicator showing unsaved changes"
+      ]
+    },
+    "13": {
+      "name": "Project Export/Import",
+      "phase": "Phase 1",
+      "status": "not_started",
+      "userStory": "As a filmmaker, I want to export my project as a file so that I can back it up, share it, or work on it across different devices.",
+      "acceptanceCriteria": [
+        "Export project as JSON file",
+        "Include all project data and metadata",
+        "Import project files to restore or continue work",
+        "Validate imported files for compatibility",
+        "Handle import conflicts (version mismatch, missing data)"
+      ]
+    },
+    "14": {
+      "name": "Project Versioning",
+      "phase": "Phase 2",
+      "status": "not_started",
+      "userStory": "As a filmmaker, I want to save multiple versions of my project so that I can experiment with different creative directions and revert if needed.",
+      "acceptanceCriteria": [
+        "Create named versions (V1 - Original, V2 - Darker mood)",
+        "Save snapshot of entire project state",
+        "View version history with timestamps and notes",
+        "Restore any previous version",
+        "Compare versions (see what changed between versions)",
+        "Branch/merge functionality (optional, advanced)"
+      ]
+    },
+    "15": {
+      "name": "Project Duplication",
+      "phase": "Phase 2",
+      "status": "not_started",
+      "userStory": "As a filmmaker, I want to duplicate my project so that I can create variations without losing the original.",
+      "acceptanceCriteria": [
+        "Duplicate Project button",
+        "Creates complete copy with new name",
+        "All configurations, storyboards, and generated assets copied",
+        "Prompt for new project name",
+        "Keep reference to original project"
+      ]
+    },
+    "16": {
+      "name": "Fountain Script Import with Smart Configuration",
+      "phase": "Phase 2",
+      "status": "not_started",
+      "userStory": "As a filmmaker, I want to import an existing Fountain script and have the system intelligently suggest configurations so that I don't have to start from scratch.",
+      "acceptanceCriteria": [
+        "Upload Fountain script (.fountain or .txt)",
+        "Parse script and identify scenes, characters, locations",
+        "AI analyzes script and suggests script-level visual style based on genre/tone",
+        "AI suggests character profiles from dialogue and action descriptions",
+        "AI suggests scene mood/lighting based on scene descriptions",
+        "Director reviews and accepts/edits suggestions",
+        "Generate initial rough draft storyboards automatically"
+      ]
+    },
+    "17": {
+      "name": "Cloud Sync & Collaboration",
+      "phase": "Phase 3",
+      "status": "not_started",
+      "userStory": "As a filmmaker, I want to sync my projects to the cloud so that I can access them from anywhere and collaborate with team members.",
+      "acceptanceCriteria": [
+        "User accounts with authentication",
+        "Projects synced to cloud storage",
+        "Access projects from any device",
+        "Real-time sync across devices",
+        "Share projects with specific users",
+        "Permission levels (view, edit, admin)",
+        "Comments/annotations on storyboards",
+        "Offline mode with conflict resolution",
+        "Project history and activity log"
+      ]
+    },
+    "18": {
+      "name": "Scene-Focused Main View",
+      "phase": "Phase 1",
+      "status": "not_started",
+      "userStory": "As a filmmaker, I want to focus on one scene at a time so that I can work through my script methodically without being overwhelmed.",
+      "acceptanceCriteria": [
+        "Main view displays current scene with its storyboard panels",
+        "Left Sidebar: Project name and settings",
+        "Left Sidebar: Script overview (scene list with scene headings)",
+        "Left Sidebar: Character list (quick access to character profiles)",
+        "Left Sidebar: Scene navigation (previous/next, jump to scene)",
+        "Left Sidebar: Global settings (script-level config)",
+        "Main Content: Current scene heading (slugline)",
+        "Main Content: Scene-level settings panel (collapsible)",
+        "Main Content: Storyboard panels displayed in sequence",
+        "Main Content: Timeline/filmstrip view of panels",
+        "Main Content: Script text for this scene",
+        "Right Panel: Contextual tools (edit prompts, settings, video generation)",
+        "Top Navigation: Breadcrumb navigation",
+        "Top Navigation: View mode toggles (Storyboard / Script / Split)",
+        "Top Navigation: Export / Save / Share buttons"
+      ]
+    },
+    "19": {
+      "name": "Storyboard Panel Interaction",
+      "phase": "Phase 1",
+      "status": "not_started",
+      "userStory": "As a filmmaker, I want to interact with individual storyboard panels naturally so that I can review and refine them efficiently.",
+      "acceptanceCriteria": [
+        "Storyboard panels displayed in horizontal scrollable strip (filmstrip style)",
+        "Click panel to select/focus it",
+        "Selected panel shows in larger detail view",
+        "Panel Actions: Edit button (opens edit prompt panel)",
+        "Panel Actions: Regenerate button (create new version)",
+        "Panel Actions: Duplicate button (copy panel)",
+        "Panel Actions: Delete button (remove panel)",
+        "Panel Actions: Move/reorder buttons (shift left/right)",
+        "Panel Detail View: Large preview of storyboard image",
+        "Panel Detail View: Associated script text (action lines, dialogue)",
+        "Panel Detail View: Panel metadata (shot type, characters in frame, location)",
+        "Panel Detail View: Version history (if edited multiple times)",
+        "Keyboard navigation: Arrow keys to move between panels"
+      ]
+    },
+    "20": {
+      "name": "Script View Integration",
+      "phase": "Phase 1",
+      "status": "not_started",
+      "userStory": "As a filmmaker, I want to see the original script text alongside storyboards so that I can ensure the visual interpretation matches my written words.",
+      "acceptanceCriteria": [
+        "Script View Mode: Full parsed script display",
+        "Script View Mode: Fountain format highlighting",
+        "Script View Mode: Click scene heading to jump to that scene",
+        "Script View Mode: Click character name to view character profile",
+        "Script View Mode: Editable script text (Fountain format)",
+        "Split View Mode: Script on left, storyboards on right",
+        "Split View Mode: Synced scrolling",
+        "Split View Mode: Click action line → highlight corresponding storyboard panel",
+        "Split View Mode: Click storyboard panel → highlight script text",
+        "Storyboard View Mode: Hide script, focus on visuals (default)"
+      ]
+    }
+  },
+  "acceptanceCriteria": {
+    "phase1_foundation": {
+      "description": "Foundation Infrastructure",
+      "status": "complete",
+      "criteria": [
+        { "id": "1.1", "item": "Vite + React + TypeScript project initialized", "status": "passed", "evidence": "app/client/package.json exists with vite, react, typescript dependencies" },
+        { "id": "1.2", "item": "All core dependencies installed", "status": "passed", "evidence": "package.json includes react-query, zustand, dexie, fp-ts, react-router-dom" },
+        { "id": "1.3", "item": "TypeScript strict mode enabled with path aliases", "status": "passed", "evidence": "tsconfig.json has strict: true and @/* path aliases" },
+        { "id": "1.4", "item": "Vite configured with PWA plugin and code splitting", "status": "passed", "evidence": "vite.config.ts has VitePWA plugin and manualChunks configuration" },
+        { "id": "1.5", "item": "PWA manifest configured", "status": "passed", "evidence": "public/manifest.json and vite.config.ts manifest section" },
+        { "id": "1.6", "item": "FP facade implemented with tests", "status": "passed", "evidence": "lib/fp/ has option.ts, result.ts, async-result.ts, errors.ts with 132/133 tests passing" },
+        { "id": "1.7", "item": "Core type definitions created", "status": "passed", "evidence": "types/index.ts has Shot, Scene, Project, StoryboardPanel with confirmation state" },
+        { "id": "1.8", "item": "Test utilities created", "status": "passed", "evidence": "test-utils/index.ts has createTestDB, createTestShot, assertion helpers" },
+        { "id": "1.9", "item": "Design tokens defined", "status": "passed", "evidence": "styles/tokens.css has CSS custom properties" },
+        { "id": "1.10", "item": "Routing structure defined", "status": "passed", "evidence": "App.tsx has routes for project workspace, script editor, shot list, storyboards" },
+        { "id": "1.11", "item": "TypeScript compilation passes", "status": "passed", "evidence": "npm run type-check exits with 0" }
+      ]
+    },
+    "phase2_dataLayer": {
+      "description": "Type System & Data Layer",
+      "status": "not_started",
+      "criteria": [
+        { "id": "2.1", "item": "Dexie database schema with all tables", "status": "pending", "testFile": "src/services/__tests__/db.test.ts" },
+        { "id": "2.2", "item": "Shots indexed by sceneId and confirmed state", "status": "pending", "testFile": "src/services/__tests__/db.test.ts" },
+        { "id": "2.3", "item": "Repository pattern for all entities", "status": "pending", "testFile": "src/services/__tests__/repositories.test.ts" },
+        { "id": "2.4", "item": "ShotRepository with confirmation state management", "status": "pending", "testFile": "src/services/__tests__/shotRepository.test.ts" },
+        { "id": "2.5", "item": "DB ↔ Domain type transformations", "status": "pending", "testFile": "src/services/__tests__/adapters.test.ts" }
+      ]
+    },
+    "phase3_stateManagement": {
+      "description": "State Management",
+      "status": "not_started",
+      "criteria": [
+        { "id": "3.1", "item": "Zustand UI store with selection and view state", "status": "pending" },
+        { "id": "3.2", "item": "hasUnconfirmedChanges tracking", "status": "pending" },
+        { "id": "3.3", "item": "TanStack Query integration for data fetching", "status": "pending" }
+      ]
+    },
+    "phase5_scriptEditor": {
+      "description": "Script Editor",
+      "status": "not_started",
+      "criteria": [
+        { "id": "5.1", "item": "Fountain parser parses INT/EXT scene headings", "status": "pending", "testFile": "src/services/__tests__/fountainParser.test.ts" },
+        { "id": "5.2", "item": "Fountain parser extracts character names and dialogue", "status": "pending", "testFile": "src/services/__tests__/fountainParser.test.ts" },
+        { "id": "5.3", "item": "Script editor with syntax highlighting", "status": "pending" },
+        { "id": "5.4", "item": "Format toolbar with keyboard shortcuts", "status": "pending" }
+      ]
+    },
+    "phase7_shotList": {
+      "description": "Shot List Editor",
+      "status": "not_started",
+      "criteria": [
+        { "id": "7.1", "item": "Shot type validation (wide, medium, close-up, etc.)", "status": "pending", "testFile": "src/services/__tests__/shot-types.test.ts" },
+        { "id": "7.2", "item": "Shots created in unconfirmed state by default", "status": "pending", "testFile": "src/services/__tests__/shotService.test.ts" },
+        { "id": "7.3", "item": "Shot updates allowed when unconfirmed", "status": "pending", "testFile": "src/services/__tests__/shotService.test.ts" },
+        { "id": "7.4", "item": "Shot updates blocked when confirmed", "status": "pending", "testFile": "src/services/__tests__/shotService.test.ts" }
+      ]
+    },
+    "phase9_confirmation": {
+      "description": "Shot List Confirmation (CRITICAL - Paradigm Gate)",
+      "status": "not_started",
+      "priority": "critical",
+      "criteria": [
+        { "id": "9.1", "item": "Cannot confirm empty shot list", "status": "pending", "testFile": "src/services/__tests__/confirmationService.test.ts" },
+        { "id": "9.2", "item": "confirmShotList sets confirmed=true and confirmedAt on all shots", "status": "pending", "testFile": "src/services/__tests__/confirmationService.test.ts" },
+        { "id": "9.3", "item": "unlockShotList resets confirmation state", "status": "pending", "testFile": "src/services/__tests__/confirmationService.test.ts" },
+        { "id": "9.4", "item": "Storyboard generation BLOCKED without confirmation", "status": "pending", "testFile": "src/services/__tests__/confirmationService.test.ts", "paradigmRule": true },
+        { "id": "9.5", "item": "Storyboard generation ALLOWS after confirmation", "status": "pending", "testFile": "src/services/__tests__/confirmationService.test.ts", "paradigmRule": true },
+        { "id": "9.6", "item": "Exactly ONE panel generated per confirmed shot", "status": "pending", "testFile": "src/services/__tests__/confirmationService.test.ts", "paradigmRule": true }
+      ]
+    },
+    "phase10_storyboard": {
+      "description": "Storyboard Generation",
+      "status": "not_started",
+      "criteria": [
+        { "id": "10.1", "item": "Prompt built from shot metadata", "status": "pending", "testFile": "src/services/__tests__/storyboardService.test.ts" },
+        { "id": "10.2", "item": "SDXL API integration via Replicate", "status": "pending" },
+        { "id": "10.3", "item": "Generation progress tracking", "status": "pending" },
+        { "id": "10.4", "item": "Cost tracking per generation", "status": "pending" }
+      ]
+    }
+  },
+  "qualityGates": {
+    "testCoverage": { "target": 80, "unit": "percent", "current": null },
+    "typeCheck": { "target": "zero errors", "current": "passed" },
+    "linting": { "target": "zero errors", "current": null }
+  },
+  "knownIssues": [
+    {
+      "id": "ISSUE-001",
+      "file": "src/lib/fp/__tests__/async-result.test.ts",
+      "test": "AsyncResult > zip > runs in parallel",
+      "description": "Timing assertion too strict - expects <100ms but takes ~238ms",
+      "severity": "low",
+      "suggestedFix": "Increase threshold to 300ms or use fake timers"
+    }
+  ]
+}
