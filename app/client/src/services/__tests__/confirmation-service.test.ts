@@ -12,7 +12,7 @@ import { ConfirmationService } from '../confirmation-service';
 import { ShotService } from '../shot-service';
 import { ShotRepository } from '../repositories/shot-repository';
 import { CutlineDB } from '../db';
-import { Result, AsyncResult, AppError } from '@/lib/fp';
+import { Result } from '@/lib/fp';
 import {
   createTestDBProject,
   createTestDBScript,

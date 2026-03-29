@@ -17,7 +17,7 @@ import { ScriptRepository } from '../repositories/script-repository';
 import { CharacterRepository } from '../repositories/character-repository';
 import { CommentRepository } from '../repositories/comment-repository';
 import { VersionRepository } from '../repositories/version-repository';
-import { Result, AsyncResult, AppError } from '@/lib/fp';
+import { Result } from '@/lib/fp';
 import type {
   ProjectData,
   SceneData,
@@ -49,10 +49,16 @@ describe('Repositories', () => {
   });
 
   describe('ProjectRepository', () => {
+    const defaultProjectData: ProjectData = {
+      name: 'Test Project',
+      visualStyle: 'cinematic',
+      colorPalette: [],
+      tone: 'dramatic',
+    };
+
     it('creates a project', async () => {
       const repo = new ProjectRepository(db);
-      const data: ProjectData = { name: 'Test Project', visualStyle: 'cinematic' };
-      const result = await repo.create(data).run();
+      const result = await repo.create(defaultProjectData).run();
 
       expect(Result.isOk(result)).toBe(true);
       const project = Result.unwrap(result);
@@ -61,19 +67,17 @@ describe('Repositories', () => {
 
     it('finds project by id', async () => {
       const repo = new ProjectRepository(db);
-      const data: ProjectData = { name: 'Test' };
-      const created = await repo.create(data).run();
+      const created = await repo.create({ ...defaultProjectData, name: 'Find Me' }).run();
       const id = Result.unwrap(created).id;
 
       const found = await repo.findById(id).run();
       expect(Result.isOk(found)).toBe(true);
-      expect(Result.unwrap(found)?.name).toBe('Test');
+      expect(Result.unwrap(found)?.name).toBe('Find Me');
     });
 
     it('updates a project', async () => {
       const repo = new ProjectRepository(db);
-      const data: ProjectData = { name: 'Original' };
-      const created = await repo.create(data).run();
+      const created = await repo.create(defaultProjectData).run();
       const project = Result.unwrap(created);
 
       const updated = await repo.update(project.id, { name: 'Updated' }).run();
@@ -83,8 +87,7 @@ describe('Repositories', () => {
 
     it('deletes a project', async () => {
       const repo = new ProjectRepository(db);
-      const data: ProjectData = { name: 'To Delete' };
-      const created = await repo.create(data).run();
+      const created = await repo.create({ ...defaultProjectData, name: 'To Delete' }).run();
       const id = Result.unwrap(created).id;
 
       const deleted = await repo.delete(id).run();
