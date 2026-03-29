@@ -168,9 +168,18 @@ export class FountainParser {
           continue;
         }
 
-        // Dialogue
-        if (DIALOGUE_REGEX.test(line) && inDialogueBlock && currentScene && currentCharacter) {
-          const dialogueText = DIALOGUE_REGEX.exec(line)?.[1] || trimmedLine;
+        // Dialogue - either with standard indentation OR following a character name
+        const isIndentedDialogue = DIALOGUE_REGEX.test(line);
+        const isFollowingCharacter = inDialogueBlock && currentScene && currentCharacter &&
+          !this.isSceneHeading(trimmedLine) &&
+          !this.isCharacterName(trimmedLine) &&
+          !PARENTHETICAL_REGEX.test(trimmedLine) &&
+          !TRANSITION_REGEX.test(trimmedLine);
+
+        if ((isIndentedDialogue || isFollowingCharacter) && currentScene && currentCharacter) {
+          const dialogueText = isIndentedDialogue
+            ? (DIALOGUE_REGEX.exec(line)?.[1] || trimmedLine)
+            : trimmedLine;
 
           const element: ScriptElement = {
             id: `elem-${elementOrder++}`,
@@ -325,22 +334,88 @@ export class FountainParser {
    */
   getHighlightTokens(text: string): Result<AppError, ParseToken[]> {
     const parseResult = this.parse(text);
-    if (parseResult.isErr()) {
+    if (Result.isErr(parseResult)) {
       return parseResult;
     }
-    // Return tokens from a separate tokenization pass
-    // For now, reuse the parse logic
+    // Return tokens from a separate tokenization pass with context tracking
     const lines = text.split('\n');
     const tokens: ParseToken[] = [];
+    let inDialogueBlock = false;
 
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
+      const line = lines[i];
+      const trimmedLine = line.trim();
+      const lineNumber = i + 1;
 
-      const token = this.classifyLine(line, i + 1);
-      if (token) {
-        tokens.push(token);
+      if (!trimmedLine) {
+        inDialogueBlock = false;
+        continue;
       }
+
+      // Scene Heading
+      if (this.isSceneHeading(trimmedLine)) {
+        tokens.push({ type: 'scene_heading', text: trimmedLine, lineNumber });
+        inDialogueBlock = false;
+        continue;
+      }
+
+      // Character name
+      if (this.isCharacterName(trimmedLine)) {
+        tokens.push({ type: 'character', text: trimmedLine, lineNumber });
+        inDialogueBlock = true;
+        continue;
+      }
+
+      // Parenthetical
+      if (PARENTHETICAL_REGEX.test(trimmedLine) && inDialogueBlock) {
+        tokens.push({ type: 'parenthetical', text: trimmedLine, lineNumber });
+        continue;
+      }
+
+      // Dialogue - with indentation OR following character
+      const isIndentedDialogue = DIALOGUE_REGEX.test(line);
+      const isFollowingCharacter = inDialogueBlock &&
+        !this.isSceneHeading(trimmedLine) &&
+        !this.isCharacterName(trimmedLine) &&
+        !PARENTHETICAL_REGEX.test(trimmedLine) &&
+        !TRANSITION_REGEX.test(trimmedLine);
+
+      if (isIndentedDialogue || isFollowingCharacter) {
+        const dialogueText = isIndentedDialogue
+          ? (DIALOGUE_REGEX.exec(line)?.[1] || trimmedLine)
+          : trimmedLine;
+        tokens.push({ type: 'dialogue', text: dialogueText, lineNumber });
+        continue;
+      }
+
+      // Transition
+      if (TRANSITION_REGEX.test(trimmedLine)) {
+        tokens.push({ type: 'transition', text: trimmedLine, lineNumber });
+        inDialogueBlock = false;
+        continue;
+      }
+
+      // Centered
+      if (CENTERED_REGEX.test(trimmedLine)) {
+        tokens.push({ type: 'centered', text: CENTERED_REGEX.exec(trimmedLine)?.[1] || '', lineNumber });
+        continue;
+      }
+
+      // Lyrics
+      if (LYRICS_REGEX.test(trimmedLine)) {
+        tokens.push({ type: 'lyrics', text: LYRICS_REGEX.exec(trimmedLine)?.[1] || '', lineNumber });
+        continue;
+      }
+
+      // Page break
+      if (PAGE_BREAK_REGEX.test(trimmedLine)) {
+        tokens.push({ type: 'page_break', text: '===', lineNumber });
+        continue;
+      }
+
+      // Action (default)
+      tokens.push({ type: 'action', text: trimmedLine, lineNumber });
+      inDialogueBlock = false;
     }
 
     return Result.ok(tokens);
@@ -351,11 +426,11 @@ export class FountainParser {
    */
   getSceneAtLine(text: string, lineNumber: number): Result<AppError, ParsedScene | null> {
     const parseResult = this.parse(text);
-    if (parseResult.isErr()) {
+    if (Result.isErr(parseResult)) {
       return parseResult;
     }
 
-    const script = parseResult.unwrap();
+    const script = Result.unwrap(parseResult);
 
     for (const scene of script.scenes) {
       const firstLine = scene.elements[0]?.lineNumber || lineNumber;
@@ -389,8 +464,13 @@ export class FountainParser {
     timeOfDay: TimeOfDay;
   } {
     // Parse: INT. LOCATION - TIME OF DAY
-    const interiorMatch = line.match(/^(INT\.?|INT\.?\/EXT\.?|EXT\.?\/INT\.?)/i);
-    const isInterior = interiorMatch ? interiorMatch[1].toUpperCase().startsWith('INT') : true;
+    // Check for INT vs EXT at the start
+    const sceneTypeMatch = line.match(/^(INT\.?|EXT\.?|INT\.?\/EXT\.?|EXT\.?\/INT\.?|EST\.?|I\/E)/i);
+    let isInterior = true; // default to interior
+    if (sceneTypeMatch) {
+      const sceneType = sceneTypeMatch[1].toUpperCase();
+      isInterior = sceneType.startsWith('INT') || sceneType.startsWith('I/E') || sceneType.startsWith('INT/EXT');
+    }
 
     // Extract location (between scene type and dash)
     const locationMatch = line.match(/(?:INT\.?|EXT\.?|EST\.?|INT\.?\/EXT\.?|EXT\.?\/INT\.?|I\/E)[.\s]+([^-\n]+)/i);

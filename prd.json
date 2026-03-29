@@ -580,8 +580,8 @@
       "description": "Script Editor",
       "status": "not_started",
       "criteria": [
-        { "id": "5.1", "item": "Fountain parser parses INT/EXT scene headings", "status": "pending", "testFile": "src/services/__tests__/fountainParser.test.ts" },
-        { "id": "5.2", "item": "Fountain parser extracts character names and dialogue", "status": "pending", "testFile": "src/services/__tests__/fountainParser.test.ts" },
+        { "id": "5.1", "item": "Fountain parser parses INT/EXT scene headings", "status": "passed", "evidence": "fountain-parser.test.ts: All scene heading tests pass - INT, EXT, INT/EXT correctly parsed" },
+        { "id": "5.2", "item": "Fountain parser extracts character names and dialogue", "status": "passed", "evidence": "fountain-parser.test.ts: Character dialogue extraction and counting tests pass" },
         { "id": "5.3", "item": "Script editor with syntax highlighting", "status": "pending" },
         { "id": "5.4", "item": "Format toolbar with keyboard shortcuts", "status": "pending" }
       ]
