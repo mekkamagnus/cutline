@@ -1,0 +1,139 @@
+# Cutline MVP Progress Log
+
+Started: 2026-03-29
+
+## Phase 1: Foundation Infrastructure
+Status: ✅ COMPLETE
+
+All 11 criteria passed:
+- [x] 1.1 Vite + React + TypeScript project initialized
+- [x] 1.2 All core dependencies installed
+- [x] 1.3 TypeScript strict mode enabled with path aliases
+- [x] 1.4 Vite configured with PWA plugin and code splitting
+- [x] 1.5 PWA manifest configured
+- [x] 1.6 FP facade implemented with tests
+- [x] 1.7 Core type definitions created
+- [x] 1.8 Test utilities created
+- [x] 1.9 Design tokens defined
+- [x] 1.10 Routing structure defined
+- [x] 1.11 TypeScript compilation passes
+
+---
+
+## Phase 2: Data Layer
+Status: 🔄 IN PROGRESS
+
+Criteria:
+- [x] 2.1 Dexie database schema with all tables
+- [x] 2.2 Shots indexed by sceneId and confirmed state
+- [ ] 2.3 Repository pattern for all entities (partial - ShotRepository done)
+- [x] 2.4 ShotRepository with confirmation state management
+- [ ] 2.5 DB ↔ Domain type transformations (partial - shot-adapter done)
+
+### Tasks:
+- [ ] 2.1 Project adapter and repository
+- [ ] 2.2 Scene adapter and repository
+- [ ] 2.3 Storyboard adapter and repository
+- [ ] 2.4 Script, Character, Comment, Version adapters and repositories
+- [ ] 2.5 Validate Phase 2
+
+---
+
+## Phase 3: State Management
+Status: ⏳ NOT STARTED
+
+Criteria:
+- [ ] 3.1 Zustand UI store with selection and view state
+- [ ] 3.2 hasUnconfirmedChanges tracking
+- [ ] 3.3 TanStack Query integration for data fetching
+
+### Tasks:
+- [ ] 3.1 Update Zustand stores
+- [ ] 3.2 Create TanStack Query hooks
+- [ ] 3.3 Validate Phase 3
+
+---
+
+## Phase 4: Script Parsing & Editor
+Status: ⏳ NOT STARTED
+
+Criteria:
+- [ ] 5.1 Fountain parser parses INT/EXT scene headings
+- [ ] 5.2 Fountain parser extracts character names and dialogue
+- [ ] 5.3 Script editor with syntax highlighting
+- [ ] 5.4 Format toolbar with keyboard shortcuts
+
+### Tasks:
+- [ ] 4.1 Complete Fountain Parser
+- [ ] 4.2 Create Script Editor Components
+- [ ] 4.3 Validate Phase 4
+
+---
+
+## Phase 5: Shot List UI
+Status: 🔄 IN PROGRESS
+
+Criteria:
+- [ ] 7.1 Shot type validation
+- [x] 7.2 Shots created in unconfirmed state by default
+- [x] 7.3 Shot updates allowed when unconfirmed
+- [x] 7.4 Shot updates blocked when confirmed
+
+### Tasks:
+- [ ] 5.1 Create Shot List Components
+- [ ] 5.2 Create Confirmation UI
+- [ ] 5.3 Validate Phase 5
+
+---
+
+## Phase 6: Storyboard Components
+Status: ⏳ NOT STARTED
+
+Criteria:
+- [ ] 10.1 Prompt built from shot metadata
+- [ ] 10.2 SDXL API integration via Replicate
+- [ ] 10.3 Generation progress tracking
+- [ ] 10.4 Cost tracking per generation
+
+### Tasks:
+- [ ] 6.1 Create Storyboard Display Components
+- [ ] 6.2 Create Storyboard Generation Components
+- [ ] 6.3 Create Storyboard Service
+- [ ] 6.4 Validate Phase 6
+
+---
+
+## Phase 7: Scene Workspace Integration
+Status: ⏳ NOT STARTED
+
+### Tasks:
+- [ ] 7.1 Create Workspace Layout
+- [ ] 7.2 Integrate All Components
+- [ ] 7.3 Validate Phase 7
+
+---
+
+## Phase 8: Backend Integration
+Status: ⏳ NOT STARTED
+
+### Tasks:
+- [ ] 8.1 Complete Backend Services
+- [ ] 8.2 Connect Frontend to Backend
+- [ ] 8.3 Final Validation
+
+---
+
+## Summary
+
+| Phase | Status | Progress |
+|-------|--------|----------|
+| Phase 1 | ✅ Complete | 11/11 |
+| Phase 2 | 🔄 In Progress | 3/5 |
+| Phase 3 | ⏳ Not Started | 0/3 |
+| Phase 4 | ⏳ Not Started | 0/4 |
+| Phase 5 | 🔄 In Progress | 3/4 |
+| Phase 6 | ⏳ Not Started | 0/4 |
+| Phase 7 | ⏳ Not Started | 0/3 |
+| Phase 8 | ⏳ Not Started | 0/3 |
+
+**Overall MVP Progress: ~30%**
