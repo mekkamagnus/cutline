@@ -1,32 +1,72 @@
 -- Cutline SQLite Schema
--- Phase 1 MVP - Shot-List-First Paradigm
+-- Phase 1.5 - Authentication and User System
 
 -- Enable foreign keys
 PRAGMA foreign_keys = ON;
 
--- Projects table
+-- ============================================================================
+-- Users table (Phase 1.5)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
+-- ============================================================================
+-- API Keys table (Phase 1.5)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS api_keys (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  provider TEXT NOT NULL,
+  encrypted_key TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE(user_id, provider)
+);
+
+CREATE INDEX IF NOT EXISTS idx_api_keys_user ON api_keys(user_id);
+
+-- ============================================================================
+-- Projects table (Phase 1.5 - now with user_id)
+-- ============================================================================
 CREATE TABLE IF NOT EXISTS projects (
   id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
   name TEXT NOT NULL,
   visual_style TEXT DEFAULT 'cinematic',
   color_palette TEXT DEFAULT '[]',
   tone TEXT DEFAULT 'neutral',
   created_at TEXT DEFAULT (datetime('now')),
-  updated_at TEXT DEFAULT (datetime('now'))
+  updated_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+CREATE INDEX IF NOT EXISTS idx_projects_user ON projects(user_id);
+
+-- ============================================================================
 -- Scripts table
+-- ============================================================================
 CREATE TABLE IF NOT EXISTS scripts (
   id TEXT PRIMARY KEY,
   project_id TEXT NOT NULL,
   fountain_text TEXT DEFAULT '',
+  parsed_data TEXT DEFAULT '{}',
   format TEXT DEFAULT 'fountain' CHECK(format IN ('fountain', 'av-two-column')),
-  created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now')),
   FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
 
+CREATE INDEX IF NOT EXISTS idx_scripts_project ON scripts(project_id);
+
+-- ============================================================================
 -- Scenes table
+-- ============================================================================
 CREATE TABLE IF NOT EXISTS scenes (
   id TEXT PRIMARY KEY,
   script_id TEXT NOT NULL,
@@ -34,13 +74,16 @@ CREATE TABLE IF NOT EXISTS scenes (
   location TEXT NOT NULL,
   interior INTEGER DEFAULT 1,
   time_of_day TEXT DEFAULT 'DAY',
-  order_index INTEGER NOT NULL,
-  created_at TEXT DEFAULT (datetime('now')),
-  updated_at TEXT DEFAULT (datetime('now')),
+  scene_order INTEGER NOT NULL,
+  metadata TEXT DEFAULT '{}',
   FOREIGN KEY (script_id) REFERENCES scripts(id) ON DELETE CASCADE
 );
 
+CREATE INDEX IF NOT EXISTS idx_scenes_script ON scenes(script_id);
+
+-- ============================================================================
 -- Shots table (CRITICAL - confirmation paradigm)
+-- ============================================================================
 CREATE TABLE IF NOT EXISTS shots (
   id TEXT PRIMARY KEY,
   scene_id TEXT NOT NULL,
@@ -50,11 +93,10 @@ CREATE TABLE IF NOT EXISTS shots (
   movement TEXT NOT NULL CHECK(movement IN ('static', 'pan', 'tilt', 'dolly', 'truck', 'pedestal', 'arc', 'handheld', 'steadicam')),
   characters_in_frame TEXT DEFAULT '[]',
   action_description TEXT DEFAULT '',
-  duration INTEGER DEFAULT 5,
+  duration REAL DEFAULT 5.0,
   notes TEXT,
   confirmed INTEGER DEFAULT 0,
   confirmed_at TEXT,
-  version INTEGER DEFAULT 1,
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now')),
   FOREIGN KEY (scene_id) REFERENCES scenes(id) ON DELETE CASCADE

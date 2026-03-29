@@ -517,9 +517,17 @@ Video Generation (via API)
 
 ## Development Phases & MVP Scope
 
-### Phase 1: MVP (Minimum Viable Product)
+### Phase 1: MVP (Full-Stack Web Application with PWA)
 
-**Goal**: Validate core value proposition - script → shot list → storyboard workflow
+**Goal**: Validate core value proposition - script → shot list → storyboard workflow with full authentication and persistence
+
+**Architecture**:
+- Full-stack application: Bun + Elysia + SQLite backend
+- React + TypeScript + Vite frontend
+- PWA functionality for offline support and installability
+- User authentication with JWT
+- Secure API key management on backend
+- Offline-first with automatic sync
 
 **Core Features**:
 1. **Script Input & Parsing** (Feature #1)
@@ -579,8 +587,14 @@ Video Generation (via API)
 
 11. **Progressive Web App** (Feature #1.11)
     - Installable PWA
-    - Offline mode
+    - Offline mode with background sync
     - Responsive design (desktop, tablet, mobile)
+
+**Backend Features**:
+- User authentication (signup, login, password reset)
+- Project persistence to SQLite database
+- Secure AI API key proxy (keys never exposed to client)
+- Offline-first sync with conflict resolution
 
 **UI/UX**:
 - Scene-focused navigation (Features #18-20)
@@ -588,11 +602,12 @@ Video Generation (via API)
 - Script, shot list, storyboard, and split view modes
 
 **Project Management**:
-- Local auto-save (Feature #12)
-- Manual export/import as project file (Feature #13)
-- Includes shot lists in project data
+- Server-side persistence with local caching
+- Auto-sync when online
+- Manual export/import for backup
 
 **Success Criteria**:
+- User can create account and authenticate
 - Filmmaker can create/import a script
 - Script breakdown auto-extracts scenes, characters, locations
 - Filmmaker creates and confirms shot list
@@ -600,6 +615,7 @@ Video Generation (via API)
 - Filmmaker can refine panels
 - Filmmaker can export storyboard images
 - End-to-end workflow works for a 5-10 page script
+- Offline editing syncs when connection restored
 - **NO video generation** - storyboard export is sufficient for MVP
 
 ### Phase 1.1: Enhanced Visual References & Video
@@ -648,24 +664,20 @@ Video Generation (via API)
   - Resolution/quality settings
 - **Video Export with Transitions** (partial Feature #10)
   - Assemble scenes with basic transitions
+- **Team Collaboration**
+  - Share projects with team members
+  - Permission levels (view, edit, admin)
+  - Real-time collaboration features
 
-### Phase 3: Cloud Collaboration & Platform
+### Phase 3: Platform & Collaboration
 
-**Goal**: Multi-user workflows and cloud platform
+**Goal**: Multi-user workflows and enterprise features
 
 **Additional Features**:
-- **User Accounts & Authentication**
-  - Sign up/login with email
-  - Password reset
-- **Cloud Sync** (Feature #16)
-  - Projects synced to cloud storage
-  - Access projects from any device
-  - Real-time sync across devices
-  - Offline mode with conflict resolution
-- **Collaborative Editing**
-  - Share projects with specific users
+- **Team Collaboration** (Feature #17.5 enhanced)
+  - Share projects with team members
   - Permission levels (view, edit, admin)
-  - Real-time collaboration
+  - Real-time collaboration with presence indicators
 - **Comments & Annotations** (expanded from Feature #1.10)
   - Multi-user comments
   - @mentions and notifications
@@ -678,6 +690,10 @@ Video Generation (via API)
 - **Full Video Assembly and Export** (complete Feature #10)
   - Assemble full video with transitions
   - Export options: resolution, frame rate, format
+- **Enterprise Features**
+  - SSO integration (SAML, OIDC)
+  - Audit logs
+  - Advanced analytics
 
 **User Story**: As a filmmaker, I want to see the original script text alongside storyboards so that I can ensure the visual interpretation matches my written words.
 
@@ -808,17 +824,19 @@ Video Generation (via API)
 
 ### ✓ Question 11: Technical Architecture
 
-**Answer**: Modern TypeScript stack with browser-only MVP
+**Answer**: Full-stack TypeScript application with PWA functionality
 
-**Frontend**: React + TypeScript, Vite, TanStack (Query/Zustand)
-**MVP Storage**: IndexedDB, browser File System API
-**Backend (Phases 2+)**: Node + Elysia + SQLite
+**Frontend**: React + TypeScript, Vite, TanStack (Query/Zustand), PWA (service worker, offline-first)
+**Backend**: Bun + Elysia + SQLite (from MVP)
+**Storage**: SQLite on server + IndexedDB for offline cache
 
 **Rationale**:
-- Browser-only MVP for faster development and validation
-- Node + Elysia + SQLite for lightweight, type-safe backend when needed
+- Full-stack from MVP provides authentication, secure API key management, and persistent storage
+- PWA capabilities enable offline editing with automatic sync
+- Bun + Elysia + SQLite for lightweight, type-safe backend with single-server deployment
 - TanStack for excellent API state management
 - TypeScript everywhere for type safety
+- Secure: AI API keys never exposed to client
 
 ### ✓ Question 12: Image Generation API
 
@@ -866,25 +884,29 @@ Video Generation (via API)
 
 ### Tech Stack
 
-**Frontend (All Phases)**:
+**Frontend**:
 - **Framework**: React with TypeScript
 - **Build Tool**: Vite (fast dev server, optimized builds)
 - **Styling**: CSS Modules or Tailwind CSS
 - **State Management**: TanStack (Query for API calls, simple Zustand for local state if needed)
 - **UI Components**: Consider shadcn/ui or Radix UI for accessible components
 - **Functional Programming**: fp-ts behind facade pattern (see docs/fp-*.md)
+- **PWA**: Service worker for offline support, installable app experience
 
-**MVP (Phase 1) - Browser Only**:
-- **Data Storage**: IndexedDB (via Dexie.js or similar) for project data
-- **File System**: Browser File System Access API for project import/export
-- **API Integration**: Direct calls from browser to AI APIs
-- **Authentication**: None (local-only)
-
-**Phase 2+ - Backend (when cloud features needed)**:
-- **Runtime**: Node.js
+**Backend**:
+- **Runtime**: Bun
 - **Web Framework**: Elysia
-- **Database**: SQLite (via better-sqlite3 or similar)
-- **Authentication**: Will determine when needed (likely JWT-based)
+- **Database**: SQLite (via bun:sqlite native driver)
+- **Authentication**: JWT-based
+- **API Key Proxy**: Secure handling of AI service API keys on server
+
+**Why Full-Stack with PWA?**
+- **Security**: API keys stored securely on server, never exposed to client
+- **Persistence**: Reliable server-side storage with offline-first local cache
+- **Authentication**: User accounts with proper session management
+- **Sync**: Automatic synchronization between devices
+- **PWA Benefits**: Installable, works offline with sync when online
+- **Simple Deployment**: Bun + Elysia + SQLite = single server deployment
 
 ### Functional Programming Workflow
 
@@ -925,17 +947,24 @@ See `docs/fp-quick-start.md` for common patterns and `docs/fp-anti-patterns.md` 
 
 ### Architecture Decisions
 
-**Why Browser-Only MVP?**
-- Faster development (no backend to build/maintain)
-- Lower complexity (single codebase)
-- Privacy-friendly (projects stay local)
-- Can validate core workflow before investing in backend
+**Why Full-Stack Web Application with PWA?**
+- Complete application from the start with proper authentication and persistence
+- Secure API key handling on the server side
+- PWA enables offline use with automatic sync when online
+- Single server deployment with Bun + Elysia + SQLite (no separate DB server)
+- TypeScript everywhere for end-to-end type safety
 
-**Why Node + Elysia + SQLite for Backend?**
-- **Node.js**: Mature runtime with vast ecosystem and LTS support
-- **Elysia**: Modern, type-safe web framework with excellent TypeScript support
+**Why Bun + Elysia + SQLite?**
+- **Bun**: Fast all-in-one runtime with native TypeScript, built-in test runner, bundler, and package manager
+- **Elysia**: Modern, type-safe web framework built for Bun with excellent DX
 - **SQLite**: Lightweight, embedded database (easy hosting, no separate DB server)
 - **TypeScript everywhere**: End-to-end type safety
+
+**Why PWA Functionality?**
+- Installable on desktop and mobile devices
+- Offline-first architecture with background sync
+- App-like experience without app store distribution
+- Automatic updates via service worker
 
 **Why TanStack?**
 - **TanStack Query**: Best-in-class data fetching, caching, state management

@@ -5,10 +5,16 @@
  * - No storyboard generation can occur without confirmation
  * - Confirmed shots are locked from editing
  * - Provides explicit lock/unlock workflow
+ *
+ * Workflow:
+ * 1. User creates shots (unconfirmed by default)
+ * 2. User confirms shot list (locks all shots)
+ * 3. System allows storyboard generation
+ * 4. User can unlock to make changes (disables generation)
  */
 import { db } from '../db/connection.js';
 import { ShotService } from './shot-service.js';
-import type { DBShot } from '../types/index.js';
+import type { DBShot, ServiceResult } from '../types/index.js';
 
 export interface ConfirmationResult {
   success: boolean;
@@ -21,41 +27,61 @@ export interface UnlockResult {
   unlockedCount: number;
 }
 
-export class ConfirmationService {
-  /**
-   * Get confirmation status for a scene
-   */
-  static getStatus(sceneId: string): {
-    totalShots: number;
-    confirmedShots: number;
-    isFullyConfirmed: boolean;
-    hasUnconfirmedChanges: boolean;
-  } {
-    const shots = ShotService.getByScene(sceneId);
-    const confirmedShots = shots.filter(s => s.confirmed === 1);
+export interface ConfirmationStatus {
+  sceneId: string;
+  totalShots: number;
+  confirmedShots: number;
+  unconfirmedShots: number;
+  isFullyConfirmed: boolean;
+  isPartiallyConfirmed: boolean;
+  hasUnconfirmedChanges: boolean;
+  canGenerate: boolean;
+  lastConfirmedAt: string | null;
+}
 
-    return {
-      totalShots: shots.length,
-      confirmedShots: confirmedShots.length,
-      isFullyConfirmed: shots.length > 0 && confirmedShots.length === shots.length,
-      hasUnconfirmedChanges: shots.length > 0 && confirmedShots.length < shots.length,
-    };
-  }
+export class ConfirmationService {
+  // =========================================================================
+  // Core Operations
+  // =========================================================================
 
   /**
    * Confirm all shots in a scene
    * PARADIGM GATE: This enables storyboard generation
+   * CRITICAL: Cannot confirm empty shot list
    */
-  static confirmShotList(sceneId: string): ConfirmationResult | { error: string } {
-    const shots = ShotService.getByScene(sceneId);
+  static confirmShotList(sceneId: string): ServiceResult<ConfirmationResult> {
+    const stats = ShotService.getConfirmationStats(sceneId);
 
-    // Cannot confirm empty shot list
-    if (shots.length === 0) {
-      return { error: 'Cannot confirm empty shot list. Add shots first.' };
+    // PARADIGM ENFORCEMENT: Cannot confirm empty shot list
+    if (stats.total === 0) {
+      return {
+        success: false,
+        error: 'Cannot confirm empty shot list. Add at least one shot before confirming.'
+      };
+    }
+
+    // Already fully confirmed - idempotent success
+    if (stats.isFullyConfirmed) {
+      const shots = ShotService.getConfirmedByScene(sceneId);
+      const lastConfirmedAt = shots.reduce((latest: string | null, shot) => {
+        if (!shot.confirmed_at) return latest;
+        if (!latest || shot.confirmed_at > latest) return shot.confirmed_at;
+        return latest;
+      }, null);
+
+      return {
+        success: true,
+        data: {
+          success: true,
+          confirmedCount: stats.confirmed,
+          confirmedAt: lastConfirmedAt || new Date().toISOString(),
+        }
+      };
     }
 
     const now = new Date().toISOString();
 
+    // Update all unconfirmed shots to confirmed
     const update = db.query(`
       UPDATE shots
       SET confirmed = 1, confirmed_at = $confirmedAt, updated_at = $updatedAt
@@ -70,8 +96,11 @@ export class ConfirmationService {
 
     return {
       success: true,
-      confirmedCount: result.changes,
-      confirmedAt: now,
+      data: {
+        success: true,
+        confirmedCount: result.changes,
+        confirmedAt: now,
+      }
     };
   }
 
@@ -79,7 +108,7 @@ export class ConfirmationService {
    * Unlock a confirmed shot list for editing
    * This disables storyboard generation and allows shot modifications
    */
-  static unlockShotList(sceneId: string): UnlockResult {
+  static unlockShotList(sceneId: string): ServiceResult<UnlockResult> {
     const update = db.query(`
       UPDATE shots
       SET confirmed = 0, confirmed_at = NULL, updated_at = $updatedAt
@@ -94,7 +123,41 @@ export class ConfirmationService {
 
     return {
       success: true,
-      unlockedCount: result.changes,
+      data: {
+        success: true,
+        unlockedCount: result.changes,
+      }
+    };
+  }
+
+  // =========================================================================
+  // Status & Queries
+  // =========================================================================
+
+  /**
+   * Get comprehensive confirmation status for a scene
+   */
+  static getStatus(sceneId: string): ConfirmationStatus {
+    const stats = ShotService.getConfirmationStats(sceneId);
+    const confirmedShots = ShotService.getConfirmedByScene(sceneId);
+
+    // Find the most recent confirmation timestamp
+    const lastConfirmedAt = confirmedShots.reduce((latest: string | null, shot) => {
+      if (!shot.confirmed_at) return latest;
+      if (!latest || shot.confirmed_at > latest) return shot.confirmed_at;
+      return latest;
+    }, null);
+
+    return {
+      sceneId,
+      totalShots: stats.total,
+      confirmedShots: stats.confirmed,
+      unconfirmedShots: stats.unconfirmed,
+      isFullyConfirmed: stats.isFullyConfirmed,
+      isPartiallyConfirmed: stats.confirmed > 0 && stats.unconfirmed > 0,
+      hasUnconfirmedChanges: stats.total > 0 && stats.confirmed < stats.total,
+      canGenerate: stats.isFullyConfirmed,
+      lastConfirmedAt,
     };
   }
 
@@ -106,50 +169,84 @@ export class ConfirmationService {
     allowed: boolean;
     reason?: string;
     confirmedShotCount: number;
+    totalShotCount: number;
   } {
-    const shots = ShotService.getByScene(sceneId);
-    const confirmedShots = shots.filter(s => s.confirmed === 1);
+    const stats = ShotService.getConfirmationStats(sceneId);
 
-    if (shots.length === 0) {
+    if (stats.total === 0) {
       return {
         allowed: false,
-        reason: 'No shots exist for this scene. Create shots first.',
+        reason: 'No shots exist for this scene. Create and confirm shots first.',
         confirmedShotCount: 0,
+        totalShotCount: 0,
       };
     }
 
-    if (confirmedShots.length === 0) {
+    if (stats.confirmed === 0) {
       return {
         allowed: false,
         reason: 'No confirmed shots. Confirm the shot list first.',
         confirmedShotCount: 0,
+        totalShotCount: stats.total,
       };
     }
 
-    if (confirmedShots.length < shots.length) {
+    if (stats.unconfirmed > 0) {
       return {
         allowed: false,
-        reason: `${shots.length - confirmedShots.length} shots are unconfirmed. Confirm all shots first.`,
-        confirmedShotCount: confirmedShots.length,
+        reason: `${stats.unconfirmed} shot(s) are unconfirmed. Confirm all shots first.`,
+        confirmedShotCount: stats.confirmed,
+        totalShotCount: stats.total,
       };
     }
 
     return {
       allowed: true,
-      confirmedShotCount: confirmedShots.length,
+      confirmedShotCount: stats.confirmed,
+      totalShotCount: stats.total,
     };
   }
 
   /**
    * Get all confirmed shots for storyboard generation
    * Only returns shots if the scene is fully confirmed
+   * PARADIGM GATE: Returns error if not fully confirmed
    */
-  static getConfirmedShotsForGeneration(sceneId: string): DBShot[] | { error: string } {
+  static getConfirmedShotsForGeneration(sceneId: string): ServiceResult<DBShot[]> {
     const canGenerate = this.canGenerateStoryboards(sceneId);
     if (!canGenerate.allowed) {
-      return { error: canGenerate.reason! };
+      return { success: false, error: canGenerate.reason! };
     }
 
-    return ShotService.getConfirmedByScene(sceneId);
+    const shots = ShotService.getConfirmedByScene(sceneId);
+    return { success: true, data: shots };
+  }
+
+  // =========================================================================
+  // Utility Methods
+  // =========================================================================
+
+  /**
+   * Check if a scene has any shots
+   */
+  static hasShots(sceneId: string): boolean {
+    const stats = ShotService.getConfirmationStats(sceneId);
+    return stats.total > 0;
+  }
+
+  /**
+   * Check if a scene is confirmed (all shots locked)
+   */
+  static isConfirmed(sceneId: string): boolean {
+    const stats = ShotService.getConfirmationStats(sceneId);
+    return stats.isFullyConfirmed;
+  }
+
+  /**
+   * Check if a scene can be unlocked (has confirmed shots)
+   */
+  static canUnlock(sceneId: string): boolean {
+    const stats = ShotService.getConfirmationStats(sceneId);
+    return stats.confirmed > 0;
   }
 }

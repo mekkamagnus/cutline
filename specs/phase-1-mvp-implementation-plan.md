@@ -71,9 +71,14 @@ This ensures:
 
 ## Feature Description
 
-Cutline Phase 1 MVP is a browser-only Progressive Web App (PWA) that transforms Fountain-format scripts into storyboards through an AI-assisted workflow.
+Cutline Phase 1 MVP is a full-stack web application with PWA functionality that transforms Fountain-format scripts into storyboards through an AI-assisted workflow.
 
 **Target Users**: Filmmakers and storytellers (primary), short video creators (secondary)
+
+**Architecture**:
+- **Frontend**: React + TypeScript + Vite PWA (installable, offline-capable)
+- **Backend**: Bun + Elysia + SQLite (authentication, persistence, AI proxy)
+- **Sync**: Offline-first with automatic sync to server
 
 **Core Workflow**:
 1. Fountain Script → Script Parsing & Breakdown
@@ -85,8 +90,8 @@ Cutline Phase 1 MVP is a browser-only Progressive Web App (PWA) that transforms 
 ## User Story
 
 As a filmmaker,
-I want to write/edit Fountain scripts, break them down into scenes, define shot lists with AI assistance, confirm my shot list, and generate storyboard images from confirmed shots,
-So that I can efficiently visualize my script before production while maintaining complete creative control.
+I want to create an account, write/edit Fountain scripts, break them down into scenes, define shot lists with AI assistance, confirm my shot list, and generate storyboard images from confirmed shots,
+So that I can efficiently visualize my script before production while maintaining complete creative control, with my work securely synced across devices.
 
 ## Problem Statement
 
@@ -97,13 +102,15 @@ Filmmakers need to transform scripts into visual storyboards, but existing tools
 
 ## Solution Statement
 
-Cutline Phase 1 MVP provides a browser-only PWA that:
+Cutline Phase 1 MVP provides a full-stack web application with PWA functionality that:
+- **Authenticates users** with secure JWT-based authentication
 - **Parses Fountain scripts** automatically into scenes, characters, and locations
 - **Provides AI-assisted shot suggestions** that directors can edit before generation
 - **Requires explicit shot list confirmation** before any AI generation occurs
-- **Generates storyboard panels** from confirmed shots using SDXL or 通义万相 APIs
-- **Stores everything locally** with IndexedDB for privacy and offline access
-- **Works as a PWA** for installation and offline use
+- **Generates storyboard panels** from confirmed shots via secure server-side AI proxy
+- **Persists projects** to SQLite database with offline caching in IndexedDB
+- **Works as a PWA** for installation and offline use with automatic sync
+- **Secures AI API keys** on the server, never exposed to client
 
 ---
 
@@ -112,7 +119,7 @@ Cutline Phase 1 MVP provides a browser-only PWA that:
 ```
 cutline/
 ├── app/
-│   ├── client/                    # React + TypeScript + Vite frontend
+│   ├── client/                    # React + TypeScript + Vite PWA frontend
 │   │   ├── src/
 │   │   │   ├── components/
 │   │   │   │   ├── editor/        # Script editor (PRD #1.5)
@@ -124,11 +131,29 @@ cutline/
 │   │   │   ├── hooks/
 │   │   │   ├── stores/            # Zustand (architecture.md lines 988-1011)
 │   │   │   ├── services/          # Service layer (architecture.md lines 1149-1587)
+│   │   │   ├── lib/               # FP facade, utilities
 │   │   │   ├── types/             # TypeScript types (architecture.md lines 494-828)
 │   │   │   └── utils/
-│   │   ├── public/                # PWA assets
+│   │   ├── public/                # PWA assets, manifest
 │   │   └── vite.config.ts
-│   └── server/                    # Backend (Phase 2+)
+│   └── server/                    # Bun + Elysia + SQLite backend (MVP)
+│       ├── src/
+│       │   ├── routes/            # API endpoints
+│       │   │   ├── auth.ts        # Signup, login, JWT
+│       │   │   ├── projects.ts    # Project CRUD
+│       │   │   ├── ai.ts          # AI proxy endpoints
+│       │   │   └── sync.ts        # Offline sync
+│       │   ├── db/                # Database layer
+│       │   │   ├── schema.ts      # SQLite schema
+│       │   │   └── migrations.ts  # Migration runner
+│       │   ├── services/          # Business logic
+│       │   │   ├── auth.service.ts
+│       │   │   ├── project.service.ts
+│       │   │   └── ai-proxy.service.ts
+│       │   ├── middleware/        # Auth, CORS, logging
+│       │   └── index.ts           # Elysia app entry
+│       ├── data/                  # SQLite database files
+│       └── bunfig.toml            # Bun configuration
 ├── docs/
 │   ├── prd.md                     # Product requirements
 │   └── architecture.md            # Technical architecture
@@ -143,22 +168,29 @@ cutline/
 ## Implementation Plan
 
 ### Phase 1: Foundation Infrastructure
-**Goal**: Set up project with all core systems referenced in architecture.md
+**Goal**: Set up full-stack project with all core systems
 
 #### 1.1 Project Initialization
 ```bash
 # Create structure
-mkdir -p app/client/src/{components/{editor,breakdown,shots,storyboards,ui,layout},hooks,stores,services,types,utils}
-mkdir -p app/client/public scripts
+mkdir -p app/client/src/{components/{editor,breakdown,shots,storyboards,ui,layout},hooks,stores,services,types,lib/fp,utils}
+mkdir -p app/client/public
+mkdir -p app/server/src/{routes,services,db,middleware}
+mkdir -p app/server/data
 
-# Initialize Vite + React + TypeScript
+# Initialize frontend (Vite + React + TypeScript)
 cd app/client
 npm create vite@latest . -- --template react-ts
 npm install
+
+# Initialize backend (Bun + Elysia)
+cd ../server
+bun init
+bun add elysia @elysia/jwt @elysia/cors
 ```
 
-#### 1.2 Core Dependencies
-**From architecture.md lines 62-75**:
+#### 1.2 Frontend Dependencies
+**From architecture.md Frontend section**:
 ```bash
 npm install @tanstack/react-query@^5.0.0 \
             @tanstack/react-virtual@^3.0.0 \
@@ -179,20 +211,51 @@ npm install -D vitest@^1.0.0 \
                workbox-window@^7.0.0
 ```
 
-#### 1.3 TypeScript Configuration
-**From architecture.md lines 1307-1342**:
+#### 1.3 Backend Dependencies
+```bash
+cd app/server
+bun add elysia \
+         @elysia/jwt \
+         @elysia/cors \
+         jose \
+         zod
+```
+
+#### 1.4 TypeScript Configuration
+**Frontend** (app/client/tsconfig.json):
 - Strict mode enabled
 - Path aliases: `@/lib/*`, `@/components/*`, `@/services/*`, `@/types/*`
 - ES2020 target with JSX support
 
-#### 1.4 Vite Configuration
-**From architecture.md lines 1307-1342**:
+**Backend** (app/server/tsconfig.json):
+- Strict mode enabled
+- Path aliases for clean imports
+- ES2022 target for Bun
+
+#### 1.5 Vite Configuration with PWA
+**From architecture.md**:
 - Path aliases matching tsconfig
-- PWA plugin with workbox
+- PWA plugin with workbox for offline support
+- API proxy to backend server
 - Build optimization with code splitting
 
-#### 1.5 PWA Manifest
-**From architecture.md lines 2624-2671**:
+#### 1.6 Backend Server Setup
+```typescript
+// app/server/src/index.ts
+import { Elysia } from 'elysia';
+import { cors } from '@elysia/cors';
+import { jwt } from '@elysia/jwt';
+
+const app = new Elysia()
+  .use(cors())
+  .use(jwt({ secret: process.env.JWT_SECRET }))
+  .get('/health', () => ({ status: 'ok' }))
+  .listen(3001);
+
+console.log(`Backend running at http://localhost:${app.server?.port}`);
+```
+
+#### 1.7 PWA Manifest
 ```json
 {
   "name": "Cutline",
@@ -203,6 +266,267 @@ npm install -D vitest@^1.0.0 \
   "background_color": "#0f0f0f",
   "theme_color": "#6366f1"
 }
+```
+
+---
+
+### Phase 1.5: Backend API Implementation
+**Goal**: Set up Bun + Elysia backend with authentication and API proxy
+
+#### 1.5.1 Backend Project Structure
+```
+app/server/
+├── src/
+│   ├── index.ts              # Elysia app entry point
+│   ├── routes/
+│   │   ├── auth.ts           # POST /auth/signup, /auth/login
+│   │   ├── projects.ts       # GET/POST/PUT/DELETE /projects
+│   │   ├── scenes.ts         # Scene CRUD operations
+│   │   ├── shots.ts          # Shot CRUD + confirmation
+│   │   ├── ai.ts             # AI proxy endpoints (generation)
+│   │   └── sync.ts           # Offline sync endpoint
+│   ├── db/
+│   │   ├── index.ts          # SQLite connection
+│   │   ├── schema.sql        # Database schema
+│   │   └── migrations.ts     # Migration runner
+│   ├── services/
+│   │   ├── auth.service.ts   # Password hashing, JWT generation
+│   │   ├── project.service.ts
+│   │   └── ai-proxy.service.ts  # Secure API key handling
+│   ├── middleware/
+│   │   ├── auth.ts           # JWT verification middleware
+│   │   ├── cors.ts           # CORS configuration
+│   │   └── error.ts          # Error handling
+│   └── types/
+│       └── index.ts          # Shared types with frontend
+├── data/                     # SQLite database files
+├── bunfig.toml               # Bun configuration
+└── package.json
+```
+
+#### 1.5.2 SQLite Schema
+```sql
+-- app/server/src/db/schema.sql
+
+CREATE TABLE users (
+  id TEXT PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE api_keys (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  provider TEXT NOT NULL,  -- 'replicate' | 'dashscope'
+  encrypted_key TEXT NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, provider)
+);
+
+CREATE TABLE projects (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  name TEXT NOT NULL,
+  visual_style TEXT,
+  color_palette TEXT,  -- JSON array
+  tone TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE scripts (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  fountain_text TEXT,
+  parsed_data TEXT,  -- JSON
+  format TEXT DEFAULT 'fountain',
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE scenes (
+  id TEXT PRIMARY KEY,
+  script_id TEXT NOT NULL REFERENCES scripts(id) ON DELETE CASCADE,
+  heading TEXT NOT NULL,
+  location TEXT,
+  interior INTEGER DEFAULT 1,
+  time_of_day TEXT,
+  scene_order INTEGER,
+  metadata TEXT  -- JSON
+);
+
+CREATE TABLE shots (
+  id TEXT PRIMARY KEY,
+  scene_id TEXT NOT NULL REFERENCES scenes(id) ON DELETE CASCADE,
+  shot_number INTEGER NOT NULL,
+  type TEXT NOT NULL,
+  angle TEXT NOT NULL,
+  movement TEXT NOT NULL,
+  characters_in_frame TEXT,  -- JSON array
+  action_description TEXT,
+  duration REAL,
+  notes TEXT,
+  confirmed INTEGER DEFAULT 0,
+  confirmed_at TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE storyboards (
+  id TEXT PRIMARY KEY,
+  shot_id TEXT NOT NULL REFERENCES shots(id) ON DELETE CASCADE,
+  image_url TEXT NOT NULL,
+  generated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  generation_params TEXT,  -- JSON
+  api_provider TEXT,
+  cost REAL,
+  style TEXT,
+  version INTEGER DEFAULT 1,
+  previous_versions TEXT,  -- JSON
+  refinement_prompt TEXT
+);
+
+-- Indexes for performance
+CREATE INDEX idx_shots_scene ON shots(scene_id);
+CREATE INDEX idx_shots_confirmed ON shots(confirmed);
+CREATE INDEX idx_scenes_script ON scenes(script_id);
+CREATE INDEX idx_projects_user ON projects(user_id);
+```
+
+#### 1.5.3 Authentication Service
+```typescript
+// app/server/src/services/auth.service.ts
+import { sign, verify } from 'jose';
+import { hash, compare } from 'bcrypt';
+
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
+
+export class AuthService {
+  static async signup(email: string, password: string) {
+    const passwordHash = await hash(password, 12);
+    const user = await db.users.create({
+      id: crypto.randomUUID(),
+      email,
+      password_hash: passwordHash,
+    });
+    return this.generateToken(user.id);
+  }
+
+  static async login(email: string, password: string) {
+    const user = await db.users.findByEmail(email);
+    if (!user || !(await compare(password, user.password_hash))) {
+      throw new Error('Invalid credentials');
+    }
+    return this.generateToken(user.id);
+  }
+
+  private static async generateToken(userId: string) {
+    return await sign({ userId }, JWT_SECRET, { expiresIn: '7d' });
+  }
+
+  static async verifyToken(token: string) {
+    const { payload } = await verify(token, JWT_SECRET);
+    return payload.userId as string;
+  }
+}
+```
+
+#### 1.5.4 AI Proxy Service
+```typescript
+// app/server/src/services/ai-proxy.service.ts
+// AI API keys are stored encrypted on server, never exposed to client
+
+export class AIProxyService {
+  static async generateImage(
+    userId: string,
+    provider: 'sdxl' | 'wanxiang',
+    params: GenerationParams
+  ): Promise<GeneratedImage> {
+    // Get encrypted API key for user
+    const keyRecord = await db.api_keys.findByUserAndProvider(userId, provider);
+    if (!keyRecord) {
+      throw new Error(`No API key configured for ${provider}`);
+    }
+
+    const apiKey = decrypt(keyRecord.encrypted_key);
+
+    // Proxy to AI provider
+    if (provider === 'sdxl') {
+      return this.callSDXL(apiKey, params);
+    } else {
+      return this.callWanxiang(apiKey, params);
+    }
+  }
+
+  private static async callSDXL(apiKey: string, params: GenerationParams) {
+    const response = await fetch('https://api.replicate.com/v1/predictions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        version: SDXL_MODEL_VERSION,
+        input: this.buildSDXLInput(params),
+      }),
+    });
+    // ... handle response
+  }
+}
+```
+
+#### 1.5.5 Elysia Routes
+```typescript
+// app/server/src/routes/auth.ts
+import { Elysia, t } from 'elysia';
+import { AuthService } from '../services/auth.service';
+
+export const authRoutes = new Elysia({ prefix: '/auth' })
+  .post('/signup', async ({ body }) => {
+    const { email, password } = body;
+    const token = await AuthService.signup(email, password);
+    return { token };
+  }, {
+    body: t.Object({
+      email: t.String(),
+      password: t.String({ minLength: 8 }),
+    }),
+  })
+  .post('/login', async ({ body }) => {
+    const { email, password } = body;
+    const token = await AuthService.login(email, password);
+    return { token };
+  }, {
+    body: t.Object({
+      email: t.String(),
+      password: t.String(),
+    }),
+  });
+```
+
+#### 1.5.6 Sync Endpoint
+```typescript
+// app/server/src/routes/sync.ts
+// Offline-first sync with conflict resolution
+
+export const syncRoutes = new Elysia({ prefix: '/sync' })
+  .use(authMiddleware)
+  .post('/push', async ({ body, user }) => {
+    // Receive changes from client
+    const { changes, lastSyncAt } = body;
+
+    // Apply changes with conflict detection
+    const conflicts = await SyncService.applyChanges(user.id, changes, lastSyncAt);
+
+    return { conflicts, syncedAt: new Date().toISOString() };
+  })
+  .get('/pull', async ({ query, user }) => {
+    // Send changes since last sync
+    const { since } = query;
+    const changes = await SyncService.getChangesSince(user.id, since);
+    return { changes, syncedAt: new Date().toISOString() };
+  });
 ```
 
 ---
@@ -1351,6 +1675,185 @@ Before starting each phase implementation:
 
 ---
 
+### Phase 1.5 TDD: Backend API
+
+#### 1.5.1 Backend Test Structure
+```
+app/server/
+├── src/
+│   └── __tests__/
+│       ├── auth.test.ts
+│       ├── projects.test.ts
+│       ├── ai-proxy.test.ts
+│       └── sync.test.ts
+```
+
+#### 1.5.2 TDD Cycle: Authentication
+
+**🔴 RED - Define auth behavior first:**
+```typescript
+// app/server/src/__tests__/auth.test.ts
+import { describe, it, expect, beforeEach } from 'bun:test';
+import { AuthService } from '../services/auth.service';
+
+describe('AuthService', () => {
+  describe('signup', () => {
+    it('hashes password with bcrypt', async () => {
+      const email = 'test@example.com';
+      const password = 'password123';
+
+      const result = await AuthService.signup(email, password);
+
+      expect(result.token).toBeDefined();
+      expect(result.user.email).toBe(email);
+      expect(result.user.password_hash).not.toBe(password);
+    });
+
+    it('rejects duplicate emails', async () => {
+      await AuthService.signup('dup@example.com', 'password123');
+
+      await expect(
+        AuthService.signup('dup@example.com', 'different')
+      ).rejects.toThrow('Email already exists');
+    });
+
+    it('validates email format', async () => {
+      await expect(
+        AuthService.signup('invalid-email', 'password123')
+      ).rejects.toThrow('Invalid email');
+    });
+  });
+
+  describe('login', () => {
+    it('returns JWT token on success', async () => {
+      await AuthService.signup('login@example.com', 'password123');
+
+      const result = await AuthService.login('login@example.com', 'password123');
+
+      expect(result.token).toBeDefined();
+      expect(result.user.email).toBe('login@example.com');
+    });
+
+    it('rejects wrong password', async () => {
+      await AuthService.signup('wrong@example.com', 'password123');
+
+      await expect(
+        AuthService.login('wrong@example.com', 'wrongpassword')
+      ).rejects.toThrow('Invalid credentials');
+    });
+  });
+});
+```
+
+#### 1.5.3 TDD Cycle: AI Proxy
+
+**🔴 RED - Define proxy behavior:**
+```typescript
+// app/server/src/__tests__/ai-proxy.test.ts
+import { describe, it, expect, vi } from 'bun:test';
+import { AIProxyService } from '../services/ai-proxy.service';
+
+describe('AIProxyService', () => {
+  describe('generateImage', () => {
+    it('calls Replicate API with stored key', async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ output: ['image-url'] }),
+      });
+      global.fetch = mockFetch;
+
+      const userId = 'user-123';
+      const prompt = 'A close-up shot of a character';
+
+      const result = await AIProxyService.generateImage(userId, prompt, 'sdxl');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'https://api.replicate.com/v1/predictions',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'Authorization': expect.stringContaining('Token r8_'),
+          }),
+        })
+      );
+      expect(result.imageUrl).toBe('image-url');
+    });
+
+    it('never exposes API key to client', async () => {
+      const result = await AIProxyService.generateImage('user-123', 'test', 'sdxl');
+
+      // Result should NOT contain the API key
+      expect(JSON.stringify(result)).not.toContain('r8_');
+    });
+
+    it('handles rate limiting gracefully', async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 429,
+        json: () => Promise.resolve({ error: 'Rate limited' }),
+      });
+      global.fetch = mockFetch;
+
+      await expect(
+        AIProxyService.generateImage('user-123', 'test', 'sdxl')
+      ).rejects.toThrow('Rate limited');
+    });
+  });
+});
+```
+
+#### 1.5.4 TDD Cycle: Sync Service
+
+**🔴 RED - Define sync behavior:**
+```typescript
+// app/server/src/__tests__/sync.test.ts
+import { describe, it, expect, beforeEach } from 'bun:test';
+import { SyncService } from '../services/sync.service';
+
+describe('SyncService', () => {
+  describe('applyChanges', () => {
+    it('applies valid changes', async () => {
+      const userId = 'user-123';
+      const changes = [
+        { type: 'create', entity: 'shot', data: { id: 'shot-1', type: 'wide' } },
+        { type: 'update', entity: 'shot', id: 'shot-2', data: { type: 'close-up' } },
+      ];
+
+      const result = await SyncService.applyChanges(userId, changes, null);
+
+      expect(result.conflicts).toHaveLength(0);
+      expect(result.applied).toBe(2);
+    });
+
+    it('detects conflicts on concurrent edits', async () => {
+      const userId = 'user-123';
+      const baseTime = new Date('2024-01-01').toISOString();
+
+      // Create a shot
+      await SyncService.applyChanges(userId, [
+        { type: 'create', entity: 'shot', data: { id: 'shot-1', type: 'wide', updatedAt: baseTime } },
+      ], null);
+
+      // Simulate another client editing the same shot
+      await SyncService.applyChanges(userId, [
+        { type: 'update', entity: 'shot', id: 'shot-1', data: { type: 'medium' }, baseVersion: baseTime },
+      ], null);
+
+      // Try to update with stale base version
+      const result = await SyncService.applyChanges(userId, [
+        { type: 'update', entity: 'shot', id: 'shot-1', data: { type: 'close-up' }, baseVersion: baseTime },
+      ], null);
+
+      expect(result.conflicts).toHaveLength(1);
+      expect(result.conflicts[0].entity).toBe('shot');
+      expect(result.conflicts[0].id).toBe('shot-1');
+    });
+  });
+});
+```
+
+---
+
 ## Testing Strategy
 
 ### Paradigm Enforcement Tests
@@ -1399,6 +1902,14 @@ describe('Shot-List-First Paradigm', () => {
 - [ ] Generation shows cost estimate before starting
 - [ ] Each confirmed shot generates exactly ONE storyboard panel
 
+### Authentication & Backend (Full-Stack MVP)
+- [ ] User can sign up with email and password
+- [ ] User can log in with credentials
+- [ ] JWT tokens manage authentication state
+- [ ] Projects persist to server-side SQLite database
+- [ ] AI API keys stored securely on server (never exposed to client)
+- [ ] All AI generation calls proxied through backend
+
 ### Core Functionality
 - [ ] Can create/write Fountain scripts with syntax highlighting
 - [ ] Script parses into scenes and breakdown automatically
@@ -1406,8 +1917,13 @@ describe('Shot-List-First Paradigm', () => {
 - [ ] Can accept/edit/reject AI suggestions
 - [ ] Can refine storyboards with text prompts
 - [ ] Can export storyboards as files
-- [ ] All data persists locally in IndexedDB
-- [ ] Works offline after first load
+
+### PWA & Offline (Offline-First with Sync)
+- [ ] App is installable on desktop and mobile
+- [ ] Core editing works offline with IndexedDB cache
+- [ ] Changes sync automatically when connection restored
+- [ ] Conflict resolution handles concurrent edits
+- [ ] Offline indicator shows sync status
 
 ### UI/UX (From Mockups)
 - [ ] Desktop three-column layout matches mockup.html
@@ -1444,22 +1960,39 @@ npm run build
 
 ---
 
-## Manual Testing Checklist (Paradigm Verification)
+## Manual Testing Checklist (Full-Stack MVP)
 
-1. ☐ Create new project
-2. ☐ Write 3-scene Fountain script
-3. ☐ Verify breakdown extracts scenes correctly
-4. ☐ Scene 1: Add 5 shots manually
-5. ☐ Try to generate storyboards → **Should fail with "Confirm shot list first"**
-6. ☐ Confirm shot list → Verify lock icon appears
-7. ☐ Try to edit a shot → **Should be blocked**
-8. ☐ Generate storyboards → Verify 5 panels created
-9. ☐ Unlock shot list → Edit a shot → Re-confirm
-10. ☐ Generate again → Verify cost shown, progress tracked
-11. ☐ Refine 1 storyboard
-12. ☐ Export storyboards
-13. ☐ Test on mobile viewport
-14. ☐ Test offline mode
+### Authentication Flow
+1. ☐ Sign up with email and password
+2. ☐ Verify password is hashed (check database)
+3. ☐ Log out and log back in
+4. ☐ Verify JWT token persistence
+5. ☐ Test invalid login credentials rejected
+
+### Shot-List-First Paradigm
+6. ☐ Create new project
+7. ☐ Write 3-scene Fountain script
+8. ☐ Verify breakdown extracts scenes correctly
+9. ☐ Scene 1: Add 5 shots manually
+10. ☐ Try to generate storyboards → **Should fail with "Confirm shot list first"**
+11. ☐ Confirm shot list → Verify lock icon appears
+12. ☐ Try to edit a shot → **Should be blocked**
+13. ☐ Generate storyboards → Verify 5 panels created via server proxy
+14. ☐ Unlock shot list → Edit a shot → Re-confirm
+15. ☐ Generate again → Verify cost shown, progress tracked
+
+### PWA & Offline Sync
+16. ☐ Install app on desktop/mobile
+17. ☐ Go offline → Make edits
+18. ☐ Verify offline indicator shows
+19. ☐ Go online → Verify changes sync
+20. ☐ Test on second device → Verify sync works
+
+### Cross-Device
+21. ☐ Login on mobile device
+22. ☐ Verify projects appear
+23. ☐ Make edit on mobile → Verify appears on desktop
+24. ☐ Test conflict resolution (edit same entity on two devices)
 
 ---
 
@@ -1476,13 +2009,24 @@ This paradigm ensures:
 3. **No waste**: No credits spent on unwanted storyboards
 4. **Clear workflow**: Explicit confirmation gate
 
-### Why IndexedDB?
-**Reference**: architecture.md lines 113-118
+### Why Full-Stack with PWA?
+**Reference**: architecture.md Architecture Principles
 
-- Browser-only MVP requires local storage
-- Privacy-friendly (projects stay local)
-- Works offline
-- Can export/import for backup
+- **Security**: AI API keys stored securely on server, never exposed to client
+- **Persistence**: Reliable server-side storage with offline-first local cache
+- **Authentication**: Proper user accounts with JWT-based sessions
+- **Sync**: Automatic synchronization between devices with conflict resolution
+- **Offline Support**: PWA enables working without connection, syncs when online
+- **Simple Deployment**: Single server (Bun + Elysia + SQLite) = one deployable unit
+
+### Why IndexedDB + SQLite?
+**Reference**: architecture.md Storage & Persistence
+
+- IndexedDB serves as offline-first cache in browser
+- SQLite provides reliable server-side persistence
+- Automatic sync between client cache and server
+- Works offline with background sync when connection restored
+- Conflict resolution for concurrent edits
 
 ### Why fp-ts Facade?
 **Reference**: architecture.md lines 143-158
@@ -1579,7 +2123,15 @@ The shot-list-first paradigm is enforced by these critical features (in prd.json
 ## Known Limitations (Phase 1)
 
 - No video generation (Phase 1.1)
-- No cloud sync (Phase 3)
-- No user accounts (Phase 3)
 - No character visual references (Phase 1.1)
-- Single user only (local)
+- No real-time collaboration (Phase 2)
+- No team workspaces (Phase 2)
+- No video assembly with transitions (Phase 3)
+- Single-server deployment (horizontal scaling in Phase 3+)
+- No end-to-end encryption for project data (Phase 2)
+
+---
+
+**Document Version**: 2.1
+**Last Updated**: 2026-03-29
+**Architecture**: Full-Stack Web Application with PWA Functionality

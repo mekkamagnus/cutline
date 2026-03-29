@@ -10,26 +10,102 @@
 import { Result, Result as ResultType } from './result';
 import { AppError } from './errors';
 
-// The type representing a deferred async computation
-export type AsyncResult<E, T> = {
+// Interface for chainable AsyncResult methods
+interface AsyncResultMethods<E, T> {
   readonly _tag: 'AsyncResult';
   run: () => Promise<ResultType<E, T>>;
-};
+  map: <B>(f: (a: T) => B) => AsyncResult<E, B>;
+  mapErr: <F>(f: (e: E) => F) => AsyncResult<F, T>;
+  andThen: <B>(f: (a: T) => AsyncResult<E, B>) => AsyncResult<E, B>;
+  orElse: <F>(f: (e: E) => AsyncResult<F, T>) => AsyncResult<F, T>;
+  tap: (onResult: (result: ResultType<E, T>) => void) => AsyncResult<E, T>;
+  tapOk: (f: (value: T) => void) => AsyncResult<E, T>;
+  tapErr: (f: (error: E) => void) => AsyncResult<E, T>;
+}
+
+// The type representing a deferred async computation with chainable methods
+export type AsyncResult<E, T> = AsyncResultMethods<E, T>;
 
 // Convenience type alias for our standard AsyncResult
 export type AppAsyncResult<T> = AsyncResult<AppError, T>;
 
 /**
- * Internal helper to create an AsyncResult from a thunk
+ * Internal helper to create an AsyncResult from a thunk with chainable methods
  */
 function makeAsyncResult<E, T>(
   run: () => Promise<ResultType<E, T>>
 ): AsyncResult<E, T> {
-  return { _tag: 'AsyncResult', run };
+  const asyncResult: AsyncResult<E, T> = {
+    _tag: 'AsyncResult',
+    run,
+
+    map: <B>(f: (a: T) => B): AsyncResult<E, B> =>
+      makeAsyncResult(async () => {
+        const result = await run();
+        if (Result.isErr(result)) {
+          return Result.err(result.left) as ResultType<E, B>;
+        }
+        return Result.ok(f(result.right));
+      }),
+
+    mapErr: <F>(f: (e: E) => F): AsyncResult<F, T> =>
+      makeAsyncResult(async () => {
+        const result = await run();
+        if (Result.isErr(result)) {
+          return Result.err(f(result.left));
+        }
+        return Result.ok(result.right) as ResultType<F, T>;
+      }),
+
+    andThen: <B>(f: (a: T) => AsyncResult<E, B>): AsyncResult<E, B> =>
+      makeAsyncResult(async () => {
+        const result = await run();
+        if (Result.isErr(result)) {
+          return Result.err(result.left) as ResultType<E, B>;
+        }
+        return f(result.right).run();
+      }),
+
+    orElse: <F>(f: (e: E) => AsyncResult<F, T>): AsyncResult<F, T> =>
+      makeAsyncResult(async () => {
+        const result = await run();
+        if (Result.isOk(result)) {
+          return Result.ok(result.right) as ResultType<F, T>;
+        }
+        return f(result.left).run();
+      }),
+
+    tap: (onResult: (result: ResultType<E, T>) => void): AsyncResult<E, T> =>
+      makeAsyncResult(async () => {
+        const result = await run();
+        onResult(result);
+        return result;
+      }),
+
+    tapOk: (f: (value: T) => void): AsyncResult<E, T> =>
+      makeAsyncResult(async () => {
+        const result = await run();
+        if (Result.isOk(result)) {
+          f(result.right);
+        }
+        return result;
+      }),
+
+    tapErr: (f: (error: E) => void): AsyncResult<E, T> =>
+      makeAsyncResult(async () => {
+        const result = await run();
+        if (Result.isErr(result)) {
+          f(result.left);
+        }
+        return result;
+      }),
+  };
+
+  return asyncResult;
 }
 
 /**
- * AsyncResult namespace with all operations
+ * AsyncResult namespace with all operations (curried style for compatibility)
  */
 export const AsyncResult = {
   /**
@@ -67,47 +143,27 @@ export const AsyncResult = {
     makeAsyncResult(async () => f()),
 
   /**
-   * Map over an AsyncResult's success value
+   * Map over an AsyncResult's success value (curried)
    */
-  map: <A, B, E>(f: (a: A) => B) => (asyncResult: AsyncResult<E, A>): AsyncResult<E, B> => {
-    return makeAsyncResult(async () => {
-      const result = await asyncResult.run();
-      if (Result.isErr(result)) {
-        return Result.err(result.left) as ResultType<E, B>;
-      }
-      return Result.ok(f(result.right));
-    });
-  },
+  map: <A, B, E>(f: (a: A) => B) => (asyncResult: AsyncResult<E, A>): AsyncResult<E, B> =>
+    asyncResult.map(f),
 
   /**
-   * Map over an AsyncResult's error value
+   * Map over an AsyncResult's error value (curried)
    */
   mapErr: <E, F, T>(
     f: (e: E) => F
-  ) => (asyncResult: AsyncResult<E, T>): AsyncResult<F, T> => {
-    return makeAsyncResult(async () => {
-      const result = await asyncResult.run();
-      if (Result.isErr(result)) {
-        return Result.err(f(result.left));
-      }
-      return Result.ok(result.right) as ResultType<F, T>;
-    });
-  },
+  ) => (asyncResult: AsyncResult<E, T>): AsyncResult<F, T> =>
+    asyncResult.mapErr(f),
 
   /**
-   * FlatMap over an AsyncResult's success value
+   * FlatMap over an AsyncResult's success value (curried)
    * This is the key operation for composing async operations
    */
   andThen: <A, B, E>(
     f: (a: A) => AsyncResult<E, B>
   ) => (asyncResult: AsyncResult<E, A>): AsyncResult<E, B> =>
-    makeAsyncResult(async () => {
-      const result = await asyncResult.run();
-      if (Result.isErr(result)) {
-        return Result.err(result.left) as ResultType<E, B>;
-      }
-      return f(result.right).run();
-    }),
+    asyncResult.andThen(f),
 
   /**
    * Alias for andThen (more intuitive name)
@@ -115,21 +171,15 @@ export const AsyncResult = {
   flatMap: <A, B, E>(
     f: (a: A) => AsyncResult<E, B>
   ) => (asyncResult: AsyncResult<E, A>): AsyncResult<E, B> =>
-    AsyncResult.andThen(f)(asyncResult),
+    asyncResult.andThen(f),
 
   /**
-   * FlatMap over an AsyncResult's error value (recovery)
+   * FlatMap over an AsyncResult's error value (recovery) (curried)
    */
   orElse: <E, F, T>(
     f: (e: E) => AsyncResult<F, T>
   ) => (asyncResult: AsyncResult<E, T>): AsyncResult<F, T> =>
-    makeAsyncResult(async () => {
-      const result = await asyncResult.run();
-      if (Result.isOk(result)) {
-        return Result.ok(result.right) as ResultType<F, T>;
-      }
-      return f(result.left).run();
-    }),
+    asyncResult.orElse(f),
 
   /**
    * Pattern match on an AsyncResult
@@ -263,38 +313,22 @@ export const AsyncResult = {
     asyncResult.run(),
 
   /**
-   * Tap into the result without modifying it (for side effects like logging)
+   * Tap into the result without modifying it (for side effects like logging) (curried)
    */
   tap: <E, T>(
     onResult: (result: ResultType<E, T>) => void
   ) => (asyncResult: AsyncResult<E, T>): AsyncResult<E, T> =>
-    makeAsyncResult(async () => {
-      const result = await asyncResult.run();
-      onResult(result);
-      return result;
-    }),
+    asyncResult.tap(onResult),
 
   /**
-   * Tap only on success
+   * Tap only on success (curried)
    */
   tapOk: <T>(f: (value: T) => void) => <E>(asyncResult: AsyncResult<E, T>): AsyncResult<E, T> =>
-    makeAsyncResult(async () => {
-      const result = await asyncResult.run();
-      if (Result.isOk(result)) {
-        f(result.right);
-      }
-      return result;
-    }),
+    asyncResult.tapOk(f),
 
   /**
-   * Tap only on error
+   * Tap only on error (curried)
    */
   tapErr: <E>(f: (error: E) => void) => <T>(asyncResult: AsyncResult<E, T>): AsyncResult<E, T> =>
-    makeAsyncResult(async () => {
-      const result = await asyncResult.run();
-      if (Result.isErr(result)) {
-        f(result.left);
-      }
-      return result;
-    }),
+    asyncResult.tapErr(f),
 };

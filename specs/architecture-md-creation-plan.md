@@ -10,8 +10,8 @@ Use these files to resolve the chore:
 
 ### Reference Files
 - `docs/prd.md` - Product Requirements Document containing technical architecture specifications (lines 866-951)
-  - Tech Stack decisions (React + TypeScript, Vite, TanStack)
-  - Architecture decisions (browser-only MVP, Bun+Elysium+SQLite for backend)
+  - Tech Stack decisions (React + TypeScript, Vite, TanStack for frontend; Bun + Elysia + SQLite for backend)
+  - Architecture decisions (full-stack MVP with PWA functionality, secure API key proxy)
   - Key technical considerations (Fountain parsing, data model, AI API integration, state management)
 
 - `DESIGN.md` - Design System documentation
@@ -76,7 +76,7 @@ IMPORTANT: Execute every step in order, top to bottom.
 
 **Future - Backend (Phase 2+):**
 - Bun runtime (fast, all-in-one)
-- Elysium web framework (type-safe)
+- Elysia web framework (type-safe, built for Bun)
 - SQLite with better-sqlite3 (embedded, easy hosting)
 
 ### Step 3: Define Architecture Principles

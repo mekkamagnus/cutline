@@ -489,3 +489,55 @@ export interface DBVersion {
   snapshot: string;
   createdAt: string;
 }
+
+// ============================================================================
+// Data Types (for creating entities)
+// ============================================================================
+
+export interface ProjectData {
+  name: string;
+  visualStyle: string;
+  colorPalette: string[];
+  tone: string;
+}
+
+export interface SceneData {
+  heading: string;
+  location: string;
+  interior: boolean;
+  timeOfDay: TimeOfDay;
+}
+
+export interface StoryboardData {
+  imageUrl: string;
+  generationParams: GenerationParams;
+  apiProvider: ApiProvider;
+  cost: number;
+  style: StoryboardStyle;
+  refinementPrompt?: string;
+}
+
+export interface ScriptData {
+  fountainText: string;
+  format?: 'fountain' | 'av-two-column';
+}
+
+export interface CharacterData {
+  name: string;
+  description?: string;
+  color: string;
+  avatarUrl?: string;
+}
+
+export interface CommentData {
+  entityType: 'project' | 'scene' | 'shot' | 'storyboard';
+  entityId: string;
+  content: string;
+  author: string;
+}
+
+export interface VersionData {
+  entityType: 'script' | 'shot-list';
+  entityId: string;
+  snapshot: string;
+}

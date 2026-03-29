@@ -9,7 +9,10 @@ import { swagger } from '@elysiajs/swagger';
 import { projectRoutes } from './routes/projects.js';
 import { shotRoutes } from './routes/shots.js';
 import { syncRoutes } from './routes/sync.js';
+import { authRoutes } from './routes/auth.js';
 import { isDatabaseHealthy } from './db/connection.js';
+
+import { authMiddleware } from './middleware/auth.js';
 
 const app = new Elysia()
   .use(cors())
@@ -17,17 +20,21 @@ const app = new Elysia()
     documentation: {
       info: {
         title: 'Cutline API',
-        version: '0.1.0',
+        version: '0.2.0',
         description: 'Script to video platform API with shot-list-first paradigm',
       },
     },
   }))
   .get('/', () => ({
     name: 'Cutline API',
-    version: '0.1.0',
+    version: '0.2.0',
     status: 'healthy',
     database: isDatabaseHealthy(),
   }))
+  // Auth routes (no authentication required)
+  .use(authRoutes)
+  // Protected routes (require authentication)
+  .use(authMiddleware)
   .use(projectRoutes)
   .use(shotRoutes)
   .use(syncRoutes)

@@ -31,6 +31,12 @@ db.run('PRAGMA foreign_keys = ON');
  */
 export function initializeDatabase(): void {
   const schemaPath = join(__dirname, 'schema.sql');
+
+  if (!existsSync(schemaPath)) {
+    console.log('📝 Schema file not found, skipping initialization');
+    return;
+  }
+
   const schema = readFileSync(schemaPath, 'utf-8');
 
   // Execute the entire schema as one transaction
@@ -61,7 +67,7 @@ export function initializeDatabase(): void {
         } catch (error) {
           const message = error instanceof Error ? error.message : '';
           if (!message.includes('already exists')) {
-            console.error('Schema error:', message, 'Statement:', currentStatement.trim().substring(0, 100));
+            console.error('Schema error:', message);
           }
         }
         currentStatement = '';

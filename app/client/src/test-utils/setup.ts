@@ -5,31 +5,10 @@
  */
 import '@testing-library/jest-dom/vitest';
 import { beforeAll, afterAll } from 'vitest';
+import 'fake-indexeddb/auto';
 
-// Mock IndexedDB for tests
-const indexedDB = {
-  open: () => ({
-    result: {
-      createObjectStore: () => ({}),
-      transaction: () => ({
-        objectStore: () => ({
-          add: () => ({}),
-          get: () => ({}),
-          put: () => ({}),
-          delete: () => ({}),
-        }),
-      }),
-    },
-    onsuccess: null,
-    onerror: null,
-  }),
-};
-
-// @ts-expect-error - Mock for testing
-globalThis.indexedDB = indexedDB;
-
-// Mock crypto.randomUUID
-if (!globalThis.crypto) {
+// Mock crypto.randomUUID if needed
+if (!globalThis.crypto?.randomUUID) {
   // @ts-expect-error - Mock for testing
   globalThis.crypto = {
     randomUUID: () =>

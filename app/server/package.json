@@ -14,9 +14,11 @@
   "dependencies": {
     "@elysiajs/cors": "^1.0.0",
     "@elysiajs/swagger": "^1.0.0",
-    "@sinclair/typebox": "^0.32.0",
+    "@sinclair/typebox": "^0.34.49",
+    "bcrypt": "^6.0.0",
     "date-fns": "^3.3.1",
     "elysia": "^1.0.0",
+    "jose": "^6.2.2",
     "nanoid": "^5.0.6"
   },
   "devDependencies": {

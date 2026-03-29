@@ -129,7 +129,7 @@ static findById(id: number): AsyncResult<AppError, User> {
 - Tests use actual SQLite connections (no mocks)
 - Data created and queried in real database
 - Proper cleanup with foreign key constraint ordering
-- Node.js environment for better-sqlite3 support
+- Bun runtime for better-sqlite3 support
 
 ### ✅ 5. Coverage Analysis
 

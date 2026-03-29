@@ -21,7 +21,7 @@
 
 ## Overview
 
-Cutline is a web application for filmmakers that transforms Fountain-format scripts into videos through an AI-assisted storyboard creation workflow.
+Cutline is a full-stack web application with PWA functionality for filmmakers that transforms Fountain-format scripts into videos through an AI-assisted storyboard creation workflow.
 
 ### Core Workflow
 
@@ -43,23 +43,26 @@ Video Generation (Phase 1.1+)
 
 ### Architecture Goals
 
-- **Browser-First PWA**: Full functionality without server-side infrastructure
-- **Offline-First**: Complete workflow available without internet connection
-- **Progressive Enhancement**: Core features work everywhere; enhanced features when available
-- **Local-First Privacy**: User projects stored locally by default
+- **Full-Stack Web Application**: React frontend + Bun/Elysia backend from MVP
+- **PWA Functionality**: Installable app with offline support and automatic sync
+- **Offline-First**: Core editing works offline with automatic sync when online
+- **Secure API Key Management**: AI service keys stored securely on backend, never exposed to client
+- **Authentication**: User accounts with JWT-based authentication
+- **Responsive Design**: Desktop, tablet, and mobile optimized
 
 ### Key Constraints
 
-- Single-page application architecture
-- IndexedDB for local persistence (no backend required for MVP)
-- Bring-your-own API key model for AI services
+- Single-page application architecture with backend API
+- SQLite database for server-side persistence
+- IndexedDB for offline cache with sync to backend
+- Bring-your-own API key model (keys stored on server)
 - Responsive design: desktop, tablet, mobile
 
 ---
 
 ## Tech Stack
 
-### Frontend (Phase 1 - MVP)
+### Frontend
 
 | Technology | Purpose | Version |
 |------------|---------|---------|
@@ -69,16 +72,25 @@ Video Generation (Phase 1.1+)
 | **TanStack Query** | Server State / API Calls | 5+ |
 | **Zustand** | Client State Management | 4+ |
 | **React Router** | Client-Side Routing | 6+ |
-| **Dexie.js** | IndexedDB Wrapper | 4+ |
+| **Dexie.js** | IndexedDB Wrapper (offline cache) | 4+ |
 | **CSS Modules** | Component Scoping | - |
 | **fp-ts** | Functional Programming (facade only) | 2.16+ |
 | **Date-fns** | Date Utilities (immutable) | 3+ |
+
+### Backend (MVP)
+
+| Technology | Purpose | Version |
+|------------|---------|---------|
+| **Bun** | JavaScript Runtime | 1+ |
+| **Elysia** | Type-safe Web Framework | 1+ |
+| **SQLite** | Embedded Database | (via bun:sqlite) |
+| **JWT** | Authentication | - |
 
 ### Why These Choices
 
 **React**: Component model aligns with hierarchical data structure (Project → Script → Scenes → Shots → Storyboards). Large ecosystem and excellent TypeScript support.
 
-**TypeScript**: End-to-end type safety for complex domain models. Shared types between frontend and future backend.
+**TypeScript**: End-to-end type safety for complex domain models. Shared types between frontend and backend.
 
 **Vite**: Lightning-fast HMR during development. Optimized production builds with automatic code splitting.
 
@@ -86,55 +98,51 @@ Video Generation (Phase 1.1+)
 
 **Zustand**: Lightweight alternative to Redux. Minimal boilerplate for simple client state (UI state, selections).
 
-**Dexie.js**: Type-safe IndexedDB wrapper with Promise-based API. Simplifies complex queries and indexing.
+**Dexie.js**: Type-safe IndexedDB wrapper for offline-first cache. Enables working offline with automatic sync.
 
 **fp-ts (facade pattern)**: Functional programming library hidden behind a facade. Provides `Option<T>`, `Result<E, T>`, `AsyncResult<E, T>` for null-safe and error-typed operations. Never imported directly outside `src/lib/fp/`.
 
 **Date-fns**: Immutable date utilities (always returns new Date). Prevents mutation bugs in scheduling features.
 
-### Backend (Phase 2+)
+### Why Bun + Elysia + SQLite
 
-| Technology | Purpose |
-|------------|---------|
-| **Bun** | JavaScript Runtime (all-in-one toolkit) |
-| **Elysium** | Type-safe web framework for Bun |
-| **SQLite** | Embedded database (via better-sqlite3) |
-
-### Why Bun + Elysium + SQLite
-
-- **Bun**: Fast startup, low memory footprint, built-in test runner and bundler
-- **Elysium**: Modern, type-safe framework with excellent TypeScript support
-- **SQLite**: Embedded database—no separate server required, easy hosting
+- **Bun**: Fast all-in-one runtime with native TypeScript, built-in test runner, bundler, and package manager
+- **Elysia**: Modern, type-safe framework built for Bun with excellent DX and end-to-end type safety
+- **SQLite**: Lightweight, embedded database—no separate server required, perfect for single-server deployment
+- **Single Deployment**: All three combined into one deployable unit
 
 ---
 
 ## Architecture Principles
 
-### 1. Browser-First MVP
+### 1. Full-Stack Application with PWA Capabilities
 
-No backend infrastructure for initial release. All functionality runs in the browser using:
-- IndexedDB for persistence
-- Direct AI API calls from client
-- Service worker for PWA capabilities
+Complete web application with frontend, backend, and PWA features from day one:
+- Backend API for authentication, persistence, and AI proxy
+- Frontend PWA for installable, offline-capable experience
+- Offline-first with automatic sync to server
 
-### 2. Offline-First
+### 2. Offline-First with Sync
 
-Full functionality without internet:
+Core editing works offline with automatic synchronization:
 - Service worker caches application assets
-- IndexedDB stores all project data
+- IndexedDB stores project data as offline cache
 - Background sync when connection restored
+- Conflict resolution for concurrent edits
 
-### 3. Progressive Enhancement
+### 3. Secure by Design
 
-Core features work everywhere:
-- Basic script editing: always available
-- AI features: require API key and connection
-- Video generation: Phase 1.1+ feature
+Security built into the architecture:
+- AI API keys stored securely on server, never exposed to client
+- JWT-based authentication with secure HTTP-only cookies
+- API proxy prevents CORS issues and hides API endpoints
+- User data encrypted at rest in SQLite
 
 ### 4. Type Safety
 
-TypeScript everywhere:
-- Shared types between frontend and future backend
+TypeScript end-to-end:
+- Shared types between frontend and backend
+- Elysia provides type-safe API routes with automatic validation
 - No `any` types in production code
 - Strict mode enabled
 
@@ -162,13 +170,15 @@ YAGNI (You Aren't Gonna Need It):
 - Implement only current requirements
 - Avoid premature optimization
 - Prefer simple solutions over clever ones
+- Single server deployment (no microservices)
 
-### 7. Local-First Privacy
+### 7. Privacy and User Control
 
-Projects stay on user's device:
-- No data sent to external servers (except AI APIs)
-- User controls their own API keys
-- Optional cloud sync (Phase 3)
+User data belongs to the user:
+- Projects synced to user's account with their consent
+- User brings their own AI API keys (stored on server)
+- Export/import for full data portability
+- Clear data retention policies
 
 ---
 
@@ -2550,48 +2560,43 @@ self.addEventListener("fetch", (event) => {
 
 ## Security Considerations
 
-### Phase 1 (Browser-Only MVP)
+### Phase 1 (Full-Stack MVP)
+
+**Authentication**:
+- JWT-based authentication with secure HTTP-only cookies
+- Password hashing with bcrypt (minimum 12 rounds)
+- Session expiration with refresh token rotation
 
 **API Key Management**:
-- User provides their own API keys (stored in IndexedDB)
-- Keys never sent to Cutline servers
-- Optional: Encrypted storage for added protection
+- User provides their own AI API keys
+- Keys stored securely on server, encrypted at rest
+- Keys NEVER exposed to client - all AI calls proxied through backend
+- API proxy prevents CORS issues and hides third-party endpoints
 
 ```typescript
-interface APIKeyStorage {
-  setKey(provider: string, key: string): Promise<void>;
-  getKey(provider: string): Promise<string | undefined>;
-  deleteKey(provider: string): Promise<void>;
+// Server-side API key storage (never sent to client)
+interface UserAPIKeys {
+  userId: string;
+  replicateKey?: string;      // Encrypted in SQLite
+  dashscopeKey?: string;      // Encrypted in SQLite
+  updatedAt: Date;
 }
 
-class IndexedDBKeyStorage implements APIKeyStorage {
-  async setKey(provider: string, key: string): Promise<void> {
-    const encrypted = await this.encrypt(key);
-    await db.settings.put({
-      key: `api-key-${provider}`,
-      valueJson: JSON.stringify(encrypted),
-    });
-  }
-
-  private async encrypt(value: string): Promise<string> {
-    // Use Web Crypto API for encryption
-    const encoder = new TextEncoder();
-    const data = encoder.encode(value);
-    const key = await this.getEncryptionKey();
-    const encrypted = await crypto.subtle.encrypt(
-      { name: "AES-GCM", iv: crypto.getRandomValues(new Uint8Array(12)) },
-      key,
-      data
-    );
-    return btoa(String.fromCharCode(...new Uint8Array(encrypted)));
-  }
-}
+// AI proxy endpoint - client never sees API keys
+app.post('/api/ai/generate', async (req, res) => {
+  const userId = req.user.id;
+  const keys = await getUserAPIKeys(userId);
+  // Proxy to Replicate/DashScope with server-side keys
+  const result = await proxyImageGeneration(req.body, keys);
+  return result;
+});
 ```
 
 **Content Security**:
-- No user script content sent to external servers (except AI APIs with user's keys)
 - CSP headers to prevent XSS
 - Input sanitization for Fountain text
+- Rate limiting on AI generation endpoints
+- CORS configured for frontend origin only
 
 **CSP Configuration**:
 
@@ -2601,50 +2606,134 @@ class IndexedDBKeyStorage implements APIKeyStorage {
   script-src 'self' 'unsafe-inline';
   style-src 'self' 'unsafe-inline';
   img-src 'self' data: https:;
-  connect-src 'self' https://api.replicate.com https://dashscope.aliyuncs.com;
+  connect-src 'self' https://api.cutline.app;
 ">
 ```
 
-### Phase 2+ (Backend)
+**Offline Sync Security**:
+- Encrypted IndexedDB cache with Web Crypto API
+- JWT tokens cached securely for offline authentication
+- Conflict resolution with server-side merge logic
 
-**Authentication**:
-- JWT-based auth
-- Secure HTTP-only cookies
-- API key proxy service
+### Phase 2+ (Enhanced Security)
 
 **Encrypted Cloud Sync**:
 - End-to-end encryption for synced projects
 - User-controlled encryption keys
 
+**Enterprise Features**:
+- SSO integration (SAML, OIDC)
+- Audit logs for compliance
+- Role-based access control
+
 ---
 
 ## Deployment Architecture
 
-### Phase 1: Static PWA
+### MVP: Single-Server Full-Stack Application
+
+**Infrastructure**:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    CDN / Static Assets                       │
+│                  (Vercel / Cloudflare)                       │
+├─────────────────────────────────────────────────────────────┤
+│                   React PWA Frontend                         │
+│              (Service Worker, Offline Cache)                 │
+└─────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Bun Runtime (VPS)                         │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
+│  │   Elysia    │  │   SQLite    │  │   File Storage      │ │
+│  │   API       │  │  Database   │  │   (User uploads)    │ │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘ │
+│                                                              │
+│  Features:                                                   │
+│  • JWT Authentication                                        │
+│  • API Key Proxy (AI services)                               │
+│  • Project Persistence                                        │
+│  • Sync & Conflict Resolution                                │
+└─────────────────────────────────────────────────────────────┘
+```
 
 **Hosting Options**:
-- Vercel (recommended)
-- Netlify
-- GitHub Pages
+- **Recommended**: Single VPS (DigitalOcean, Linode, Hetzner)
+- **Alternative**: Railway, Fly.io, or Render (managed)
+- **CDN**: Cloudflare or Vercel for static assets
 
 **Deployment Process**:
 
 ```bash
-# Build
-pnpm build
+# Build frontend
+cd app/client && pnpm build
 
-# Output: dist/
-# - index.html (with service worker inline)
-# - assets/
-#   - main-[hash].js
-#   - main-[hash].css
-#   - ...
+# Build backend
+cd app/server && bun build ./src/index.ts --outdir ./dist
 
-# Deploy to Vercel
-vercel --prod
+# Deploy
+rsync -avz dist/ user@server:/app/
+ssh user@server "cd /app && bun run dist/index.js"
 ```
 
-**PWA Manifest** (`public/manifest.json`):
+**Environment Variables**:
+
+```env
+# Server
+PORT=3000
+HOST=0.0.0.0
+DATABASE_PATH=./data/cutline.db
+
+# Authentication
+JWT_SECRET=your-secret-key
+JWT_EXPIRY=7d
+
+# AI API Keys (stored on server, never exposed to client)
+REPLICATE_API_KEY=r8_xxx
+DASHSCOPE_API_KEY=sk_xxx
+
+# Optional: AI API selection
+DEFAULT_IMAGE_PROVIDER=sdxl
+DEFAULT_VIDEO_PROVIDER=runway
+```
+
+**Docker Configuration**:
+
+```dockerfile
+FROM oven/bun:1 AS base
+WORKDIR /app
+
+# Install dependencies
+FROM base AS install
+COPY package.json bun.lockb ./
+COPY app/server/package.json ./app/server/
+RUN bun install --frozen-lockfile
+
+# Build
+FROM base AS build
+COPY --from=install /app/node_modules ./node_modules
+COPY . .
+RUN bun run build
+
+# Runtime
+FROM base AS runtime
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/node_modules ./node_modules
+COPY package.json ./
+
+# Create data directory for SQLite
+RUN mkdir -p /app/data
+
+EXPOSE 3000
+CMD ["bun", "run", "dist/index.js"]
+```
+
+### PWA Configuration
+
+**PWA Manifest** (`app/client/public/manifest.json`):
 
 ```json
 {
@@ -2670,51 +2759,7 @@ vercel --prod
 }
 ```
 
-### Phase 2: Backend (Optional)
-
-**Infrastructure**:
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      Cloudflare / CDN                       │
-├─────────────────────────────────────────────────────────────┤
-│                   Static Assets (PWA)                       │
-└─────────────────────────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    Bun Runtime (VPS)                        │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
-│  │  Elysium    │  │   SQLite    │  │  File Storage       │ │
-│  │  API        │  │  Database   │  │  (User uploads)     │ │
-│  └─────────────┘  └─────────────┘  └─────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Docker Configuration**:
-
-```dockerfile
-FROM oven/bun:1 AS base
-WORKDIR /app
-
-FROM base AS install
-COPY package.json bun.lockb ./
-RUN bun install --frozen-lockfile
-
-FROM base AS build
-COPY --from=install /app/node_modules ./node_modules
-COPY . .
-RUN bun run build
-
-FROM base AS runtime
-COPY --from=build /app/dist ./dist
-COPY --from=build /app/node_modules ./node_modules
-COPY package.json ./
-
-EXPOSE 3000
-CMD ["bun", "run", "dist/index.js"]
-```
+**Service Worker**: Handles offline caching and background sync to backend.
 
 ---
 
@@ -2722,7 +2767,7 @@ CMD ["bun", "run", "dist/index.js"]
 
 ### Prerequisites
 
-- **Node.js**: 18+ or Bun 1+
+- **Bun**: 1+ (recommended) or Node.js 18+
 - **pnpm**: 8+ (for package management)
 
 ### Project Setup
@@ -3079,47 +3124,56 @@ function useServiceCall<T>(
 
 ### Phase 1 (MVP) - This Document
 
+**Architecture**: Full-stack web application with PWA functionality
+- Frontend: React + TypeScript + Vite + PWA
+- Backend: Bun + Elysia + SQLite
+- Offline-first with sync
+
 **Includes**:
-- Browser-only PWA
+- User authentication (signup, login, JWT)
 - Script editor with Fountain parsing
 - Script breakdown
-- Shot list editor
+- Shot list editor with confirmation workflow
 - AI shot suggestions
-- Storyboard generation (SDXL/WanXiang)
-- Local storage (IndexedDB)
+- Storyboard generation (SDXL/WanXiang via server proxy)
+- Server-side persistence with offline caching
+- PWA: installable, offline editing, background sync
+- Secure API key management on server
 - Basic collaboration (comments, versions)
 
 **Excludes**:
-- Video generation
-- Cloud sync
-- User accounts
-- Character visual references
+- Video generation (Phase 1.1)
+- Character visual references (Phase 1.1)
+- Team collaboration (Phase 2)
+- Real-time sync (Phase 2)
 
 ### Phase 1.1
 
 **Adds**:
 - Character management with visual references
-- Video generation (single API)
+- Video generation (single API: Stable Video Diffusion or 通义万相)
 - Enhanced scene configuration
+- Multiple style options
 
 ### Phase 2
 
 **Adds**:
-- Backend (Bun + Elysium + SQLite)
-- Multiple video generation APIs
-- Project versioning
-- Advanced import/export
+- Multiple video generation APIs (RunwayML, Pika Labs)
+- Real-time collaboration features
+- Project versioning with branching
+- Advanced import/export formats
+- Team workspaces
 
 ### Phase 3
 
 **Adds**:
-- User accounts & authentication
-- Cloud sync
-- Real-time collaboration
-- Full video assembly & export
+- Enterprise features (SSO, audit logs)
+- Cloud storage integration
+- Full video assembly & export with transitions
+- Advanced analytics
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2025-03-28
+**Document Version**: 2.0
+**Last Updated**: 2026-03-28
 **Maintained By**: Development Team
