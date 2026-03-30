@@ -58,8 +58,8 @@ const app = new Elysia()
       message: error instanceof Error ? error.message : 'Unknown error',
     };
   })
-  .listen(3001, () => {
-    console.log('🚀 Cutline API server running on http://localhost:3001');
+  .listen(process.env.PORT || 3001, ({ port }) => {
+    console.log(`🚀 Cutline API server running on http://localhost:${port}`);
   });
 
 export default app;

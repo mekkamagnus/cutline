@@ -1,0 +1,60 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: app/client/package-lock.json
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install frontend dependencies
+        working-directory: app/client
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: app/client
+        run: npm run build
+        env:
+          VITE_API_URL: /api
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 137.184.143.235
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/cutline
+            git pull origin main
+
+            # Install and build frontend
+            cd app/client
+            npm ci
+            npm run build
+
+            # Install backend dependencies
+            cd ../server
+            bun install
+
+            # Restart PM2 process
+            pm2 restart cutline-api || PORT=3600 pm2 start src/index.ts --name cutline-api
+
+            # Reload NGINX
+            sudo systemctl reload nginx
