@@ -10,6 +10,8 @@ import { projectRoutes } from './routes/projects.js';
 import { shotRoutes } from './routes/shots.js';
 import { syncRoutes } from './routes/sync.js';
 import { authRoutes } from './routes/auth.js';
+import { aiRoutes } from './routes/ai.js';
+import { storyboardRoutes } from './routes/storyboards.js';
 import { isDatabaseHealthy } from './db/connection.js';
 
 import { authMiddleware } from './middleware/auth.js';
@@ -38,6 +40,8 @@ const app = new Elysia()
   .use(projectRoutes)
   .use(shotRoutes)
   .use(syncRoutes)
+  .use(aiRoutes)
+  .use(storyboardRoutes)
   .onError(({ error }) => {
     // Handle paradigm gate errors
     if (error instanceof Error) {

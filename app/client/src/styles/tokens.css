@@ -364,3 +364,113 @@ textarea::placeholder {
 .animate-slide-up {
   animation: slideUp var(--transition-normal);
 }
+
+/* ========== Responsive Breakpoints ========== */
+
+/* Mobile Layout (below 768px) */
+@media (max-width: 767px) {
+  :root {
+    --sidebar-width: 100%;
+    --right-sidebar-width: 100%;
+    --header-height: 60px;
+    --toolbar-height: 40px;
+    --format-bar-height: 44px;
+  }
+
+  /* Collapse to single column */
+  .editor-container {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto 1fr auto;
+  }
+
+  /* Hide sidebars on mobile */
+  .left-sidebar,
+  .right-sidebar {
+    position: fixed;
+    bottom: var(--bottom-nav-height);
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: auto;
+    z-index: var(--z-fixed);
+    transform: translateY(100%);
+    transition: transform var(--transition-normal);
+  }
+
+  .left-sidebar.open {
+    transform: translateY(0);
+  }
+
+  .right-sidebar.open {
+    transform: translateY(0);
+  }
+
+  /* Bottom Navigation for Mobile */
+  .bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--bottom-nav-height);
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+    z-index: var(--z-sticky);
+    padding: var(--space-2);
+  }
+
+  .bottom-nav button {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    min-height: var(--touch-target-min);
+    padding: var(--space-2);
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: var(--font-size-xs);
+  }
+
+  .bottom-nav button.active {
+    color: var(--accent);
+  }
+
+  .bottom-nav svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* Tablet Layout (768px to 1024px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  :root {
+    --sidebar-width: 200px;
+    --right-sidebar-width: 180px;
+  }
+
+  .editor-container {
+    grid-template-columns: var(--sidebar-width) 1fr var(--right-sidebar-width);
+  }
+}
+
+/* Desktop Layout (1024px and above) */
+@media (min-width: 1024px) {
+  .editor-container {
+    grid-template-columns: 240px 1fr 200px;
+  }
+}
+
+/* Touch Target Adjustments */
+@media (pointer: coarse) {
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    min-height: var(--touch-target-min);
+    min-width: var(--touch-target-min);
+  }
+}

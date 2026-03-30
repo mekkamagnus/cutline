@@ -115,7 +115,7 @@ function getApiKeyTable(): StoredApiKey[] {
   // In production, this would be a database table
   // For now, we use an in-memory store with database persistence
   const query = db.query(`
-    SELECT * FROM ai_api_keys WHERE user_id = $userId AND provider = $provider
+    SELECT * FROM api_keys WHERE user_id = $userId AND provider = $provider
   `);
   return query.all() as StoredApiKey[];
 }
@@ -125,25 +125,25 @@ function storeApiKey(userId: string, provider: AIProvider, apiKey: string): void
   const now = new Date().toISOString();
 
   const upsert = db.query(`
-    INSERT INTO ai_api_keys (user_id, provider, encrypted_key, created_at, updated_at)
-    VALUES ($userId, $provider, $encryptedKey, $createdAt, $updatedAt)
+    INSERT INTO api_keys (id, user_id, provider, encrypted_key, created_at)
+    VALUES ($id, $userId, $provider, $encryptedKey, $createdAt)
     ON CONFLICT(user_id, provider) DO UPDATE SET
-      encrypted_key = excluded.encrypted_key,
-      updated_at = excluded.updated_at
+      encrypted_key = excluded.encrypted_key
   `);
 
+  const id = `key-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   upsert.run({
+    $id: id,
     $userId: userId,
     $provider: provider,
     $encryptedKey: encryptedKey,
     $createdAt: now,
-    $updatedAt: now,
   });
 }
 
 function retrieveApiKey(userId: string, provider: AIProvider): string | null {
   const query = db.query(`
-    SELECT encrypted_key FROM ai_api_keys
+    SELECT encrypted_key FROM api_keys
     WHERE user_id = $userId AND provider = $provider
   `);
 
@@ -202,43 +202,202 @@ async function mockWanxiangGenerate(params: ImageGenerationParams): Promise<Gene
 }
 
 // =============================================================================
-// Real Provider Implementations (Stubs for Future)
+// Real Provider Implementations
 // =============================================================================
 
 /**
- * SDXL API Client
- * Stub - will be implemented when API access is available
+ * SDXL API Client via Replicate
+ * Uses the stable-diffusion-xl-base-1.0 model
  */
 async function sdxlGenerate(apiKey: string, params: ImageGenerationParams): Promise<GeneratedImage> {
-  // TODO: Implement real SDXL API call
-  // const response = await fetch('https://api.stability.ai/v1/generation/stable-diffusion-xl/text-to-image', {
-  //   method: 'POST',
-  //   headers: {
-  //     'Authorization': `Bearer ${apiKey}`,
-  //     'Content-Type': 'application/json',
-  //   },
-  //   body: JSON.stringify({
-  //     text_prompts: [{ text: params.prompt }],
-  //     cfg_scale: 7,
-  //     height: params.height || 1024,
-  //     width: params.width || 1024,
-  //     steps: params.steps || 30,
-  //     seed: params.seed,
-  //   }),
-  // });
+  const REPLICATE_API_URL = 'https://api.replicate.com/v1/predictions';
 
-  // For now, return mock
-  return mockSdxlGenerate(params);
+  // Build the prompt with style prefix
+  const stylePrompt = params.style ? `${params.style} style storyboard, ` : '';
+  const fullPrompt = `${stylePrompt}${params.prompt}`;
+
+  // Create prediction
+  const createResponse = await fetch(REPLICATE_API_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Token ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      version: 'stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b',
+      input: {
+        prompt: fullPrompt,
+        negative_prompt: params.negativePrompt || 'blurry, low quality, distorted, deformed, ugly, bad anatomy',
+        width: params.width || 1024,
+        height: params.height || 576,
+        num_inference_steps: params.steps || 30,
+        seed: params.seed,
+        refine: 'expert_ensemble_refiner',
+        scheduler: 'KarrasDPM',
+      },
+    }),
+  });
+
+  if (!createResponse.ok) {
+    const error = await createResponse.json() as { detail?: string };
+    throw new Error(error.detail || `Replicate API error: ${createResponse.status}`);
+  }
+
+  const prediction = await createResponse.json() as {
+    id: string;
+    status: string;
+    urls: { get: string };
+  };
+
+  // Poll for result
+  let result = prediction;
+  const maxAttempts = 60; // 60 * 2s = 2 minutes max
+  let attempts = 0;
+
+  while (result.status !== 'succeeded' && result.status !== 'failed' && attempts < maxAttempts) {
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    const statusResponse = await fetch(result.urls.get, {
+      headers: {
+        'Authorization': `Token ${apiKey}`,
+      },
+    });
+
+    if (!statusResponse.ok) {
+      throw new Error(`Failed to check prediction status: ${statusResponse.status}`);
+    }
+
+    result = await statusResponse.json() as typeof prediction & {
+      output?: string[];
+      error?: string;
+    };
+    attempts++;
+  }
+
+  if (result.status === 'failed') {
+    const errorResult = result as typeof prediction & { error?: string };
+    throw new Error(errorResult.error || 'Image generation failed');
+  }
+
+  if (result.status !== 'succeeded') {
+    throw new Error('Image generation timed out');
+  }
+
+  const successResult = result as typeof prediction & { output: string[] };
+  const imageUrl = successResult.output[0];
+
+  if (!imageUrl) {
+    throw new Error('No image URL in response');
+  }
+
+  return {
+    id: `sdxl-${prediction.id}`,
+    url: imageUrl,
+    provider: 'sdxl',
+    generatedAt: new Date().toISOString(),
+    cost: 0.002, // Approximate cost per SDXL image
+    params,
+  };
 }
 
 /**
- * WanXiang API Client
- * Stub - will be implemented when API access is available
+ * WanXiang API Client via Alibaba DashScope
+ * Uses the wanx-v1 model
  */
 async function wanxiangGenerate(apiKey: string, params: ImageGenerationParams): Promise<GeneratedImage> {
-  // TODO: Implement real WanXiang API call
-  // For now, return mock
-  return mockWanxiangGenerate(params);
+  const DASHSCOPE_API_URL = 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text2image/image-synthesis';
+
+  // Build the prompt with style prefix
+  const stylePrompt = params.style ? `${params.style} style storyboard, ` : '';
+  const fullPrompt = `${stylePrompt}${params.prompt}`;
+
+  // Create synthesis task
+  const createResponse = await fetch(DASHSCOPE_API_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'X-DashScope-Async': 'enable',
+    },
+    body: JSON.stringify({
+      model: 'wanx-v1',
+      input: {
+        prompt: fullPrompt,
+        negative_prompt: params.negativePrompt || '模糊, 低质量, 变形, 丑陋',
+      },
+      parameters: {
+        style: '<storyboard>',
+        size: `${params.width || 1024}*${params.height || 576}`,
+        n: 1,
+        seed: params.seed,
+      },
+    }),
+  });
+
+  if (!createResponse.ok) {
+    const error = await createResponse.json() as { message?: string };
+    throw new Error(error.message || `DashScope API error: ${createResponse.status}`);
+  }
+
+  const task = await createResponse.json() as {
+    output: { task_id: string; task_status: string };
+    request_id: string;
+  };
+
+  // Poll for result
+  const taskId = task.output.task_id;
+  const taskStatusUrl = `${DASHSCOPE_API_URL}/${taskId}`;
+  const maxAttempts = 60; // 60 * 2s = 2 minutes max
+  let attempts = 0;
+
+  let taskResult = task;
+  while (
+    taskResult.output.task_status !== 'SUCCEEDED' &&
+    taskResult.output.task_status !== 'FAILED' &&
+    attempts < maxAttempts
+  ) {
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    const statusResponse = await fetch(taskStatusUrl, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+      },
+    });
+
+    if (!statusResponse.ok) {
+      throw new Error(`Failed to check task status: ${statusResponse.status}`);
+    }
+
+    taskResult = await statusResponse.json() as typeof task;
+    attempts++;
+  }
+
+  if (taskResult.output.task_status === 'FAILED') {
+    const failedResult = taskResult as typeof task & { output: { message?: string } };
+    throw new Error(failedResult.output.message || 'Image generation failed');
+  }
+
+  if (taskResult.output.task_status !== 'SUCCEEDED') {
+    throw new Error('Image generation timed out');
+  }
+
+  const successResult = taskResult as typeof task & {
+    output: { results: Array<{ url: string }> };
+  };
+  const imageUrl = successResult.output.results[0]?.url;
+
+  if (!imageUrl) {
+    throw new Error('No image URL in response');
+  }
+
+  return {
+    id: `wanxiang-${taskId}`,
+    url: imageUrl,
+    provider: 'wanxiang',
+    generatedAt: new Date().toISOString(),
+    cost: 0.028, // Approximate cost per WanXiang image (~¥0.20)
+    params,
+  };
 }
 
 // =============================================================================
@@ -251,8 +410,9 @@ export class AIProxyService {
   /**
    * Generate an image using the specified AI provider
    * API keys are retrieved server-side and never exposed to client
+   * Internal implementation
    */
-  static async generateImage(
+  private static async generateImageInternal(
     userId: string,
     provider: AIProvider,
     params: ImageGenerationParams
@@ -313,7 +473,7 @@ export class AIProxyService {
       steps: 30,
     };
 
-    return this.generateImage(userId, provider, params);
+    return this.generateImageInternal(userId, provider, params);
   }
 
   /**
@@ -345,12 +505,28 @@ export class AIProxyService {
    */
   static deleteApiKey(userId: string, provider: AIProvider): ServiceResult<void> {
     const deleteQuery = db.query(`
-      DELETE FROM ai_api_keys
+      DELETE FROM api_keys
       WHERE user_id = $userId AND provider = $provider
     `);
 
     deleteQuery.run({ $userId: userId, $provider: provider });
     return { success: true };
+  }
+
+  // =========================================================================
+  // Direct Image Generation
+  // =========================================================================
+
+  /**
+   * Generate an image with custom parameters
+   * Public method for direct API access
+   */
+  static async generateImage(
+    userId: string,
+    provider: AIProvider,
+    params: ImageGenerationParams
+  ): Promise<ServiceResult<GeneratedImage>> {
+    return this.generateImageInternal(userId, provider, params);
   }
 
   // =========================================================================
@@ -360,7 +536,7 @@ export class AIProxyService {
   /**
    * Build an image generation prompt from shot data
    */
-  private static buildShotPrompt(shot: DBShot, style: string): string {
+  static buildShotPrompt(shot: DBShot, style: string): string {
     const parts: string[] = [];
 
     // Add style

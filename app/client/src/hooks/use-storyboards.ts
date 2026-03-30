@@ -2,11 +2,13 @@
  * TanStack Query Hooks for Storyboards
  *
  * Provides hooks for CRUD operations on storyboards, including generation.
+ * Uses backend API for AI generation with offline-first IndexedDB caching.
  */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { StoryboardRepository } from '@/services/repositories/storyboard-repository';
 import { CutlineDB } from '@/services/db';
 import { Result } from '@/lib/fp';
+import { api, type GenerateStoryboardsResponse } from '@/lib/api-client';
 import type { StoryboardPanel, StoryboardData } from '@/types';
 
 // Singleton DB instance
@@ -191,10 +193,17 @@ export interface GenerationStatus {
 }
 
 /**
+ * Check if we're online
+ */
+function isOnline(): boolean {
+  return navigator.onLine;
+}
+
+/**
  * Hook to generate storyboards for confirmed shots
  *
- * NOTE: This hook provides the structure for storyboard generation.
- * The actual AI API integration will be implemented in Phase 6.
+ * Calls backend API for AI generation when online.
+ * Falls back to placeholder generation when offline.
  */
 export function useGenerateStoryboards() {
   const queryClient = useQueryClient();
@@ -203,52 +212,111 @@ export function useGenerateStoryboards() {
     mutationFn: async ({
       shotIds,
       style,
+      provider = 'sdxl',
       onProgress,
     }: {
       shotIds: string[];
       style: string;
+      provider?: 'sdxl' | 'wanxiang';
       onProgress?: (status: GenerationStatus) => void;
     }): Promise<StoryboardPanel[]> => {
       const repo = getStoryboardRepo();
       const storyboards: StoryboardPanel[] = [];
 
-      for (let i = 0; i < shotIds.length; i++) {
-        const shotId = shotIds[i];
-        if (!shotId) continue;
-
+      if (isOnline()) {
+        // Online: Use backend API for real generation
         onProgress?.({
           isGenerating: true,
-          progress: Math.round((i / shotIds.length) * 100),
-          currentShot: i + 1,
+          progress: 0,
+          currentShot: 0,
           totalShots: shotIds.length,
         });
 
-        // Placeholder for actual generation
-        // In Phase 6, this will call the AI API
-        const placeholderData: StoryboardData = {
-          imageUrl: `https://placeholder.com/storyboard-${i}.png`,
-          generationParams: {
-            prompt: `Storyboard in ${style} style`,
-            width: 1024,
-            height: 768,
-          },
-          apiProvider: 'sdxl',
-          cost: 0.002,
-          style: style as StoryboardData['style'],
-        };
+        const response = await api.post<GenerateStoryboardsResponse>('/api/ai/generate/storyboards', {
+          shotIds,
+          style,
+          provider,
+        });
 
-        const result = await repo.create(shotId, placeholderData).run();
-        if (Result.isOk(result)) {
-          storyboards.push(result.right);
+        if (!response.success || !response.data) {
+          throw new Error(response.error || 'Failed to generate storyboards');
         }
-      }
 
-      onProgress?.({
-        isGenerating: false,
-        progress: 100,
-        currentShot: shotIds.length,
-        totalShots: shotIds.length,
-      });
+        // Store results in local DB for offline access
+        for (let i = 0; i < response.data.storyboards.length; i++) {
+          const sb = response.data.storyboards[i];
+          if (!sb) continue;
+
+          onProgress?.({
+            isGenerating: true,
+            progress: Math.round(((i + 1) / shotIds.length) * 100),
+            currentShot: i + 1,
+            totalShots: shotIds.length,
+          });
+
+          const storyboardData: StoryboardData = {
+            imageUrl: sb.imageUrl,
+            generationParams: {
+              prompt: `Storyboard in ${style} style`,
+              width: 1024,
+              height: 576,
+            },
+            apiProvider: sb.provider as StoryboardData['apiProvider'],
+            cost: sb.cost,
+            style: style as StoryboardData['style'],
+          };
+
+          const result = await repo.create(sb.shotId, storyboardData).run();
+          if (Result.isOk(result)) {
+            storyboards.push(result.right);
+          }
+        }
+
+        onProgress?.({
+          isGenerating: false,
+          progress: 100,
+          currentShot: shotIds.length,
+          totalShots: shotIds.length,
+        });
+      } else {
+        // Offline: Generate placeholder storyboards
+        for (let i = 0; i < shotIds.length; i++) {
+          const shotId = shotIds[i];
+          if (!shotId) continue;
+
+          onProgress?.({
+            isGenerating: true,
+            progress: Math.round((i / shotIds.length) * 100),
+            currentShot: i + 1,
+            totalShots: shotIds.length,
+          });
+
+          // Placeholder for offline generation
+          const placeholderData: StoryboardData = {
+            imageUrl: `https://picsum.photos/seed/${Date.now() + i}/1024/576`,
+            generationParams: {
+              prompt: `Storyboard in ${style} style`,
+              width: 1024,
+              height: 576,
+            },
+            apiProvider: provider,
+            cost: 0.002,
+            style: style as StoryboardData['style'],
+          };
+
+          const result = await repo.create(shotId, placeholderData).run();
+          if (Result.isOk(result)) {
+            storyboards.push(result.right);
+          }
+        }
+
+        onProgress?.({
+          isGenerating: false,
+          progress: 100,
+          currentShot: shotIds.length,
+          totalShots: shotIds.length,
+        });
+      }
 
       return storyboards;
     },

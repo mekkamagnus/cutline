@@ -740,24 +740,199 @@ The script editor uses `contenteditable="true"` with `spellcheck="false"` for Fo
 ### Complete Token List
 
 ```css
-/* Spacing */
---space-1 through --space-16
+/* Spacing Scale (8px base) */
+--space-1: 4px
+--space-2: 8px
+--space-3: 12px
+--space-4: 16px
+--space-5: 20px
+--space-6: 24px
+--space-8: 32px
+--space-10: 40px
+--space-12: 48px
+--space-16: 64px
 
-/* Colors */
---bg-primary, --bg-secondary, --bg-tertiary, --bg-hover
---border-color, --border-light
---text-primary, --text-secondary, --text-muted
---accent, --accent-hover, --accent-light
---success, --warning, --error
+/* Colors - Dark Mode */
+--bg-primary: #0f0f0f
+--bg-secondary: #1a1a1a
+--bg-tertiary: #242424
+--bg-hover: #2a2a2a
+--border-color: #333
+--border-light: #404040
+--text-primary: #f5f5f5
+--text-secondary: #a0a0a0
+--text-muted: #999
+--accent: #6366f1
+--accent-hover: #818cf8
+--accent-light: rgba(99, 102, 241, 0.2)
+--success: #22c55e
+--warning: #f59e0b
+--error: #ef4444
 
-/* Fountain Colors */
---fountain-scene, --fountain-character, --fountain-dialogue
---fountain-parenthetical, --fountain-action
---fountain-transition, --fountain-shot
+/* Fountain Element Colors */
+--fountain-scene: #fbbf24        /* Scene headings - amber */
+--fountain-character: #60a5fa    /* Character names - blue */
+--fountain-dialogue: #f5f5f5     /* Dialogue text - white */
+--fountain-parenthetical: #9ca3af /* Parentheticals - gray */
+--fountain-action: #f5f5f5       /* Action/description - white */
+--fountain-transition: #c084fc   /* Transitions - purple */
+--fountain-shot: #fb923c         /* Shot headings - orange */
 
-/* Typography */
---font-size-xs through --font-size-2xl
+/* Typography Scale */
+--font-size-xs: 12px
+--font-size-sm: 14px
+--font-size-base: 16px
+--font-size-lg: 18px
+--font-size-xl: 24px
+--font-size-2xl: 32px
+--font-size-3xl: 40px
+
+/* Font Weights */
+--font-weight-light: 300
+--font-weight-regular: 400
+--font-weight-medium: 500
+--font-weight-semibold: 600
+--font-weight-bold: 700
+
+/* Border Radius */
+--radius-sm: 4px
+--radius-md: 8px
+--radius-lg: 12px
+
+/* Shadows */
+--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3)
+--shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4)
+--shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.5)
+--shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.6)
 ```
+
+---
+
+## Implementation Status (2026-03-30)
+
+### Current State vs Design Spec
+
+The current implementation diverges significantly from this design specification. Below is a gap analysis and remediation plan.
+
+### Layout Compliance Matrix
+
+| Component | Design Spec | Current State | Match |
+|-----------|-------------|---------------|-------|
+| **Overall Layout** | Three-panel grid (240px \| 1fr \| 200px) | Single-column stacked | ❌ 20% |
+| **Header** | Logo + Nav Tabs + Version Badge | Simple breadcrumb only | ❌ 30% |
+| **Left Sidebar** | Scene navigator with INT/EXT icons | "Scenes (0)" text only | ❌ 10% |
+| **Main Editor** | Script page with fountain highlighting | Plain textarea | ❌ 20% |
+| **Right Panel** | Characters + Scene Info + Actions | "Details" header only | ❌ 10% |
+| **Format Bar** | Styled buttons with shortcuts | Disabled buttons, no styling | ⚠️ 40% |
+| **Fountain Styling** | Color-coded elements | Not implemented | ❌ 0% |
+
+**Overall Compliance: ~20%**
+
+### Critical Missing Elements
+
+#### 1. Layout Structure
+- **Missing**: Three-panel CSS Grid layout
+- **Current**: Flexbox single column
+- **Impact**: Fundamental UX difference from design
+
+#### 2. Header Component
+- **Missing**: Logo with "Cutline" branding
+- **Missing**: Nav tabs (Script/Shots/Storyboards/Breakdown)
+- **Missing**: Version badge
+- **Missing**: Export/Settings buttons
+
+#### 3. Scene Navigator
+- **Missing**: INT/EXT scene icons with color coding
+- **Missing**: Scene item active states with accent border
+- **Missing**: Script stats section (scenes, characters, locations, runtime, word count)
+
+#### 4. Character Panel
+- **Missing**: Character list with avatars
+- **Missing**: Dialogue line counts
+- **Missing**: Current scene information
+- **Missing**: Quick actions section
+
+#### 5. Script Editor
+- **Missing**: Script page container with shadow/border
+- **Missing**: Fountain syntax highlighting
+- **Missing**: Proper screenplay typography (Courier Prime)
+- **Missing**: Line numbers (optional feature)
+
+#### 6. Format Bar
+- **Missing**: Styled format buttons
+- **Missing**: Color-coded button states
+- **Missing**: Keyboard shortcut hints
+- **Missing**: Platform detection (Mac vs Win)
+
+### Remediation Priority
+
+| Priority | Task | Effort | Impact |
+|----------|------|--------|--------|
+| P0 | Implement three-panel grid layout | Medium | Critical |
+| P0 | Create Header component with nav tabs | Medium | High |
+| P1 | Style scene navigator with icons | Medium | High |
+| P1 | Add fountain syntax highlighting | High | Critical |
+| P2 | Implement character panel | Medium | Medium |
+| P2 | Style format bar | Low | Medium |
+| P3 | Add responsive breakpoints | Medium | Low |
+
+### Design Tokens Not Yet Applied
+
+The following design tokens from this spec are defined but not applied in code:
+
+```css
+/* Missing from implementation */
+--fountain-scene: #fbbf24
+--fountain-character: #60a5fa
+--fountain-dialogue: #f5f5f5
+--fountain-parenthetical: #9ca3af
+--fountain-action: #f5f5f5
+--fountain-transition: #c084fc
+--fountain-shot: #fb923c
+```
+
+### Component Architecture Update
+
+Current file structure needs reorganization:
+
+```
+src/
+├── components/
+│   ├── workspace/
+│   │   ├── Header.tsx          # NEW - Full header with nav
+│   │   ├── FormatBar.tsx       # NEW - Bottom format bar
+│   │   ├── LeftSidebar.tsx     # UPDATE - Scene navigator
+│   │   ├── RightPanel.tsx      # UPDATE - Character panel
+│   │   └── SceneWorkspace.tsx  # UPDATE - Three-panel layout
+│   └── script/
+│       ├── ScriptEditor.tsx    # UPDATE - Script page styling
+│       └── FountainHighlight.tsx # UPDATE - Element styling
+└── styles/
+    └── design-tokens.css       # NEW - Centralized tokens
+```
+
+### Visual Comparison Reference
+
+See `mockup.html` for the target design. Key visual differences:
+
+1. **Mockup**: Three distinct panels with clear separation
+   **Current**: Single panel, no visual hierarchy
+
+2. **Mockup**: Header spans full width above panels
+   **Current**: Header is part of the content flow
+
+3. **Mockup**: Format bar spans full width below editor
+   **Current**: Format buttons inline with editor
+
+4. **Mockup**: Dark backgrounds with high contrast text
+   **Current**: Default styling, low contrast
+
+### Next Steps
+
+1. Review `specs/ui-layout-refactor.md` for detailed implementation plan
+2. Start with P0 items (layout and header)
+3. Apply design tokens via CSS custom properties
+4. Validate against mockup.html visually
 
 ---
 
@@ -766,3 +941,4 @@ The script editor uses `contenteditable="true"` with `spellcheck="false"` for Fo
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | 2024-03-28 | Initial design system based on mockups |
+| 1.1 | 2026-03-30 | Added implementation status section and gap analysis |

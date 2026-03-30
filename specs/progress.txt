@@ -837,3 +837,41 @@ Status: ⏳ NOT STARTED
 | Phase 6 | ⏳ Not Started | 0/4 |
 | Phase 7 | ⏳ Not Started | 0/3 |
 | Phase 8 | ⏳ Not Started | 0/3 |
+
+---
+
+## Updates - 2026-03-30
+
+### Phase 6: AI Integration
+- [x] 6.1 Add AI proxy routes to server (ai.ts)
+- [x] 6.2 Add storyboard routes to server (storyboards.ts)
+- [x] 6.3 Wire frontend to backend AI API (use-storyboards.ts updated)
+- [x] 6.4 Create RefinementPanel component
+- [x] 6.5 Wire Replicate SDXL API implementation
+- [x] 6.6 Wire WanXiang API implementation (Alibaba DashScope)
+
+### Backend Services Added
+- `app/server/src/routes/ai.ts` - AI proxy routes for key management and generation
+- `app/server/src/routes/storyboards.ts` - Storyboard CRUD with paradigm gates
+- `app/client/src/lib/api-client.ts` - Frontend API client
+- `app/client/src/components/storyboard/RefinementPanel.tsx` - Refinement UI
+
+### AI Provider Implementations
+- **SDXL**: Full Replicate API integration with polling
+- **WanXiang**: Full Alibaba DashScope API integration with polling
+
+### Updated Status
+| Phase | Status | Progress |
+|-------|--------|----------|
+| Phase 1 | ✅ Complete | 100% |
+| Phase 2 | ✅ Complete | 100% |
+| Phase 3 | ✅ Complete | 100% |
+| Phase 4 | ✅ Complete | 100% |
+| Phase 5 | ✅ Complete | 100% |
+| Phase 6 | ✅ Complete | 100% |
+| Phase 7 | 🔄 Partial | 80% |
+| Phase 8 | ✅ Complete | 100% |
+
+**Overall MVP Progress: ~95%**
+
+Remaining work: E2E testing and minor UI polish.
