@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { Routes, Route, Navigate, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { SceneWorkspace, Header, FormatBar, LeftSidebar, RightPanel, BottomNav, MobileTopBar, MobileFormatBar, SceneSlidePanel } from '@/components/workspace';
 import { ScriptEditor } from '@/components/script';
 import { ShotListEditor } from '@/components/shot-list';
@@ -65,7 +65,7 @@ function ProjectListScreen() {
         Phase 1 MVP - Foundation Infrastructure Complete
       </p>
       <a
-        href="/project/demo-project/scene/demo-scene/shots"
+        href="/project/demo-project/script"
         style={{
           padding: isMobile ? 'var(--space-4) var(--space-6)' : 'var(--space-3) var(--space-6)',
           backgroundColor: 'var(--accent)',
@@ -84,9 +84,21 @@ function ProjectListScreen() {
   );
 }
 
+type ViewMode = 'script' | 'shots' | 'storyboards' | 'breakdown';
+
+function deriveViewMode(pathname: string, projectId: string): ViewMode {
+  const prefix = `/project/${projectId}/`;
+  const suffix = pathname.startsWith(prefix) ? pathname.slice(prefix.length) : '';
+  const segment = suffix.split('/')[0];
+  if (segment === 'shots' || segment === 'storyboards' || segment === 'breakdown') return segment;
+  return 'script';
+}
+
 function ProjectWorkspace() {
   const { projectId } = useParams<{ projectId: string }>();
-  const [viewMode, setViewMode] = useState<'script' | 'shots' | 'storyboards' | 'breakdown'>('script');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const viewMode = deriveViewMode(location.pathname, projectId ?? '');
   const [selectedShotId, setSelectedShotId] = useState<string | null>(null);
   const [content, setContent] = useState(`INT. COFFEE SHOP - DAY
 
@@ -145,8 +157,8 @@ She looks anxious, checking her watch.
     console.log('Format:', type);
   };
 
-  const handleViewModeChange = (mode: string) => {
-    setViewMode(mode as 'script' | 'shots' | 'storyboards' | 'breakdown');
+  const handleNavigate = (mode: string) => {
+    navigate(`/project/${projectId}/${mode}`);
   };
 
   // Render content based on view mode
@@ -196,7 +208,7 @@ She looks anxious, checking her watch.
       {!isMobile && (
         <Header
           viewMode={viewMode}
-          onViewModeChange={handleViewModeChange}
+          onNavigate={handleNavigate}
         />
       )}
 
@@ -282,7 +294,7 @@ She looks anxious, checking her watch.
           {/* Bottom Navigation */}
           <BottomNav
             activeView={viewMode as MobileView}
-            onViewChange={(v) => setViewMode(v)}
+            onViewChange={(v) => navigate(`/project/${projectId}/${v}`)}
           />
         </>
       )}

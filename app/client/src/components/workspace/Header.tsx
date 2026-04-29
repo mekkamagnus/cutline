@@ -7,10 +7,10 @@
 
 interface HeaderProps {
   viewMode?: 'script' | 'shots' | 'storyboards' | 'breakdown';
-  onViewModeChange?: (mode: 'script' | 'shots' | 'storyboards' | 'breakdown') => void;
+  onNavigate?: (mode: string) => void;
 }
 
-export function Header({ viewMode = 'script', onViewModeChange }: HeaderProps) {
+export function Header({ viewMode = 'script', onNavigate }: HeaderProps) {
   const navTabs = [
     { id: 'script' as const, label: 'Script' },
     { id: 'shots' as const, label: 'Shots' },
@@ -36,7 +36,7 @@ export function Header({ viewMode = 'script', onViewModeChange }: HeaderProps) {
               ...navTabStyles,
               ...(viewMode === tab.id ? activeTabStyles : {}),
             }}
-            onClick={() => onViewModeChange?.(tab.id)}
+            onClick={() => onNavigate?.(tab.id)}
           >
             {tab.label}
           </button>
