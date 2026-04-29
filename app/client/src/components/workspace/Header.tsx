@@ -4,7 +4,6 @@
  * Main application header with logo, navigation tabs, and actions.
  * Matches mockup.html design with three-panel layout.
  */
-import { NavLink, useParams } from 'react-router-dom';
 
 interface HeaderProps {
   viewMode?: 'script' | 'shots' | 'storyboards' | 'breakdown';
@@ -12,14 +11,12 @@ interface HeaderProps {
 }
 
 export function Header({ viewMode = 'script', onViewModeChange }: HeaderProps) {
-  const { projectId } = useParams<{ projectId: string }>();
-
   const navTabs = [
-    { id: 'script', label: 'Script', path: `/project/${projectId}/script` },
-    { id: 'shots', label: 'Shots', path: `/project/${projectId}/shots` },
-    { id: 'storyboards', label: 'Storyboards', path: `/project/${projectId}/storyboards` },
-    { id: 'breakdown', label: 'Breakdown', path: `/project/${projectId}/breakdown` },
-  ] as const;
+    { id: 'script' as const, label: 'Script' },
+    { id: 'shots' as const, label: 'Shots' },
+    { id: 'storyboards' as const, label: 'Storyboards' },
+    { id: 'breakdown' as const, label: 'Breakdown' },
+  ];
 
   return (
     <header style={headerStyles}>
@@ -32,17 +29,17 @@ export function Header({ viewMode = 'script', onViewModeChange }: HeaderProps) {
       {/* Navigation Tabs */}
       <nav style={navStyles}>
         {navTabs.map((tab) => (
-          <NavLink
+          <button
             key={tab.id}
-            to={tab.path}
-            style={({ isActive }) => ({
+            type="button"
+            style={{
               ...navTabStyles,
-              ...(isActive ? activeTabStyles : {}),
-            })}
+              ...(viewMode === tab.id ? activeTabStyles : {}),
+            }}
             onClick={() => onViewModeChange?.(tab.id)}
           >
             {tab.label}
-          </NavLink>
+          </button>
         ))}
       </nav>
 

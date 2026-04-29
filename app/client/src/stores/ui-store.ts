@@ -8,6 +8,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { ViewMode } from '@/types';
 
+export type MobileView = 'script' | 'shots' | 'storyboards' | 'breakdown';
+
 interface UIState {
   // Selection state
   currentProjectId: string | null;
@@ -20,6 +22,11 @@ interface UIState {
   rightSidebarOpen: boolean;
   viewMode: ViewMode;
   focusMode: boolean;
+
+  // Mobile state
+  slidePanelOpen: boolean;
+  quickFormatOpen: boolean;
+  mobileView: MobileView;
 
   // Paradigm tracking - CRITICAL for shot-list-first workflow
   hasUnconfirmedChanges: boolean;
@@ -36,6 +43,12 @@ interface UIState {
   toggleRightSidebar: () => void;
   toggleFocusMode: () => void;
 
+  // Actions - Mobile
+  toggleSlidePanel: () => void;
+  setSlidePanelOpen: (open: boolean) => void;
+  setQuickFormatOpen: (open: boolean) => void;
+  setMobileView: (view: MobileView) => void;
+
   // Actions - Paradigm
   setHasUnconfirmedChanges: (value: boolean) => void;
   resetSelections: () => void;
@@ -51,6 +64,9 @@ const initialState = {
   viewMode: 'split' as ViewMode,
   focusMode: false,
   hasUnconfirmedChanges: false,
+  slidePanelOpen: false,
+  quickFormatOpen: false,
+  mobileView: 'script' as MobileView,
 };
 
 export const useUIStore = create<UIState>()(
@@ -103,6 +119,16 @@ export const useUIStore = create<UIState>()(
             rightSidebarOpen: newFocusMode ? false : state.rightSidebarOpen,
           };
         }),
+
+      // Mobile actions
+      toggleSlidePanel: () =>
+        set((state) => ({ slidePanelOpen: !state.slidePanelOpen })),
+
+      setSlidePanelOpen: (open: boolean) => set({ slidePanelOpen: open }),
+
+      setQuickFormatOpen: (open: boolean) => set({ quickFormatOpen: open }),
+
+      setMobileView: (view: MobileView) => set({ mobileView: view }),
 
       // Paradigm actions
       setHasUnconfirmedChanges: (value) => set({ hasUnconfirmedChanges: value }),

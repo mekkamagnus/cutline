@@ -11,6 +11,7 @@ interface LeftSidebarProps {
   projectId: string;
   currentSceneId: string | null;
   onSceneSelect: (sceneId: string) => void;
+  scenes?: Scene[];
   scriptStats?: {
     totalScenes: number;
     totalCharacters: number;
@@ -24,9 +25,11 @@ export function LeftSidebar({
   projectId,
   currentSceneId,
   onSceneSelect,
+  scenes: scenesProp,
   scriptStats,
 }: LeftSidebarProps) {
-  const { data: scenes = [], isLoading } = useScenes(projectId);
+  const { data: fetchedScenes = [], isLoading } = useScenes(projectId);
+  const scenes = scenesProp ?? fetchedScenes;
 
   // Calculate stats from scenes if not provided
   const stats = scriptStats || {

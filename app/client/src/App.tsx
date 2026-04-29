@@ -1,7 +1,15 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
-import { SceneWorkspace, Header, FormatBar, LeftSidebar, RightPanel } from '@/components/workspace';
+import { SceneWorkspace, Header, FormatBar, LeftSidebar, RightPanel, BottomNav, MobileTopBar, MobileFormatBar, SceneSlidePanel } from '@/components/workspace';
 import { ScriptEditor } from '@/components/script';
+import { ShotListEditor } from '@/components/shot-list';
+import { StoryboardStrip } from '@/components/storyboard';
+import { useBreakpoint } from '@/hooks';
+import { useUIStore } from '@/stores';
+import { fountainParser } from '@/services/fountain-parser';
+import { Result } from '@/lib/fp';
+import type { Scene } from '@/types';
+import type { MobileView } from '@/components/workspace';
 
 function App() {
   return (
@@ -14,6 +22,8 @@ function App() {
 }
 
 function ProjectListScreen() {
+  const { isMobile } = useBreakpoint();
+
   return (
     <div
       style={{
@@ -22,13 +32,13 @@ function ProjectListScreen() {
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '100vh',
-        padding: 'var(--space-8)',
+        padding: isMobile ? 'var(--space-4)' : 'var(--space-8)',
         textAlign: 'center',
       }}
     >
       <h1
         style={{
-          fontSize: 'var(--font-size-3xl)',
+          fontSize: isMobile ? 'var(--font-size-2xl)' : 'var(--font-size-3xl)',
           fontWeight: 'var(--font-weight-bold)',
           marginBottom: 'var(--space-4)',
         }}
@@ -37,9 +47,10 @@ function ProjectListScreen() {
       </h1>
       <p
         style={{
-          fontSize: 'var(--font-size-lg)',
+          fontSize: isMobile ? 'var(--font-size-base)' : 'var(--font-size-lg)',
           color: 'var(--text-secondary)',
           marginBottom: 'var(--space-8)',
+          padding: isMobile ? '0 var(--space-4)' : undefined,
         }}
       >
         Script to video platform for filmmakers
@@ -56,11 +67,15 @@ function ProjectListScreen() {
       <a
         href="/project/demo-project/scene/demo-scene/shots"
         style={{
-          padding: 'var(--space-3) var(--space-6)',
-          backgroundColor: 'var(--color-primary)',
+          padding: isMobile ? 'var(--space-4) var(--space-6)' : 'var(--space-3) var(--space-6)',
+          backgroundColor: 'var(--accent)',
           color: 'white',
           borderRadius: 'var(--radius-md)',
           textDecoration: 'none',
+          fontSize: isMobile ? 'var(--font-size-base)' : 'var(--font-size-sm)',
+          minHeight: isMobile ? '44px' : undefined,
+          display: 'inline-flex',
+          alignItems: 'center',
         }}
       >
         Open Demo Project
@@ -103,6 +118,23 @@ She looks anxious, checking her watch.
               (relieved)
               Finally.`);
   const [isDirty, setIsDirty] = useState(false);
+  const { isMobile } = useBreakpoint();
+
+  const parsedScenes = useMemo<Scene[]>(() => {
+    const result = fountainParser.parse(content);
+    if (!Result.isOk(result)) return [];
+    return result.right.scenes.map((s, i) => ({
+      id: s.id,
+      scriptId: projectId ?? 'demo-project',
+      heading: s.heading,
+      location: s.location,
+      interior: s.interior,
+      timeOfDay: s.timeOfDay,
+      order: i + 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+  }, [content, projectId]);
 
   const handleSave = (newContent: string) => {
     setContent(newContent);
@@ -117,50 +149,150 @@ She looks anxious, checking her watch.
     setViewMode(mode as 'script' | 'shots' | 'storyboards' | 'breakdown');
   };
 
+  // Render content based on view mode
+  const renderContent = () => {
+    switch (viewMode) {
+      case 'script':
+        return (
+          <ScriptEditor
+            initialContent={content}
+            onChange={setContent}
+            onSave={handleSave}
+          />
+        );
+      case 'shots':
+        return (
+          <ShotListEditor
+            sceneId="demo-scene"
+            selectedShotId={selectedShotId ?? undefined}
+            onShotSelect={(shot) => setSelectedShotId(shot.id)}
+          />
+        );
+      case 'storyboards':
+        return (
+          <StoryboardStrip
+            storyboards={[]}
+            shots={[]}
+            selectedPanelId={null}
+            onPanelSelect={() => {}}
+          />
+        );
+      case 'breakdown':
+        return <ScriptBreakdownScreen />;
+      default:
+        return (
+          <ScriptEditor
+            initialContent={content}
+            onChange={setContent}
+            onSave={handleSave}
+          />
+        );
+    }
+  };
+
   return (
-    <div style={workspaceStyles}>
-      {/* Header */}
-      <Header
-        viewMode={viewMode}
-        onViewModeChange={handleViewModeChange}
-      />
-
-      {/* Main Three-Panel Grid */}
-      <div style={editorContainerStyles}>
-        {/* Left Sidebar */}
-        <LeftSidebar
-          projectId={projectId}
-          currentSceneId={null}
-          onSceneSelect={(id) => {
-            window.location.href = `/project/${projectId}/scene/${id}`;
-          }}
+    <div className={`workspace-layout ${isMobile ? 'workspace-layout--mobile' : 'workspace-layout--desktop'}`}>
+      {/* Header - desktop only */}
+      {!isMobile && (
+        <Header
+          viewMode={viewMode}
+          onViewModeChange={handleViewModeChange}
         />
+      )}
 
-        {/* Main Content */}
-        <div style={mainContentStyles}>
-          {/* Editor Area */}
-          <div style={editorAreaStyles}>
-            <ScriptEditor
-              initialContent={content}
-              onChange={setContent}
-              onSave={handleSave}
-            />
+      {/* Main Three-Panel Grid - desktop only */}
+      {!isMobile ? (
+        <div style={editorContainerStyles}>
+          {/* Left Sidebar */}
+          <LeftSidebar
+            projectId={projectId}
+            currentSceneId={null}
+            scenes={parsedScenes}
+            onSceneSelect={(id) => {
+              window.location.href = `/project/${projectId}/scene/${id}`;
+            }}
+          />
+
+          {/* Main Content */}
+          <div style={mainContentStyles}>
+            {/* Editor Area - NOW switches based on viewMode */}
+            <div style={editorAreaStyles}>
+              {renderContent()}
+            </div>
           </div>
+
+          {/* Right Sidebar */}
+          <RightPanel
+            selectedShot={null}
+            selectedStoryboard={null}
+            currentScene={null}
+            sceneId=""
+          />
         </div>
+      ) : (
+        /* Mobile single-column layout */
+        <>
+          {/* Mobile Top Bar */}
+          <MobileTopBar
+            title="The Last Train"
+            currentScene={1}
+            totalScenes={12}
+          />
 
-        {/* Right Sidebar */}
-        <RightPanel
-          selectedShot={null}
-          selectedStoryboard={null}
-          currentScene={null}
-          sceneId=""
+          {/* Main Content - NOW switches based on viewMode */}
+          <div className="mobile-content">
+            {viewMode === 'script' && (
+              <div className="mobile-script-page">
+                <ScriptEditor
+                  initialContent={content}
+                  onChange={setContent}
+                  onSave={handleSave}
+                />
+              </div>
+            )}
+            {viewMode === 'shots' && (
+              <div style={{ padding: 'var(--space-4)' }}>
+                <ShotListEditor
+                  sceneId="demo-scene"
+                  selectedShotId={selectedShotId ?? undefined}
+                  onShotSelect={(shot) => setSelectedShotId(shot.id)}
+                />
+              </div>
+            )}
+            {viewMode === 'storyboards' && (
+              <div style={{ padding: 'var(--space-4)' }}>
+                <StoryboardStrip
+                  storyboards={[]}
+                  shots={[]}
+                  selectedPanelId={null}
+                  onPanelSelect={() => {}}
+                />
+              </div>
+            )}
+            {viewMode === 'breakdown' && <ScriptBreakdownScreen />}
+          </div>
+
+          {/* Mobile Format Bar - only show for script view */}
+          {viewMode === 'script' && (
+            <MobileFormatBar
+              onFormat={handleFormat}
+            />
+          )}
+
+          {/* Bottom Navigation */}
+          <BottomNav
+            activeView={viewMode as MobileView}
+            onViewChange={(v) => setViewMode(v)}
+          />
+        </>
+      )}
+
+      {/* Format Bar - desktop only */}
+      {!isMobile && (
+        <FormatBar
+          onFormat={handleFormat}
         />
-      </div>
-
-      {/* Format Bar */}
-      <FormatBar
-        onFormat={handleFormat}
-      />
+      )}
     </div>
   );
 }
@@ -181,15 +313,7 @@ function SettingsScreen() {
   );
 }
 
-// Styles for ProjectWorkspace
-const workspaceStyles: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  minHeight: '100vh',
-  background: 'var(--bg-primary)',
-};
-
-// Three-panel grid layout (matching mockup.html)
+// Styles for ProjectWorkspace desktop
 const editorContainerStyles: React.CSSProperties = {
   display: 'grid',
   gridTemplateColumns: '240px 1fr 200px',

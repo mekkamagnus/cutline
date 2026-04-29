@@ -50,3 +50,6 @@ data/
 
 # Memory
 .claude/
+
+# Playwright CLI cache
+.playwright-cli/

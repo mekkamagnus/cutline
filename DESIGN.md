@@ -13,11 +13,15 @@ A comprehensive design system for Cutline, a screenwriting application that prio
 3. [Typography](#typography)
 4. [Spacing Scale](#spacing-scale)
 5. [Layout Patterns](#layout-patterns)
-6. [Components](#components)
-7. [Fountain Format Styling](#fountain-format-styling)
-8. [Screen Architecture](#screen-architecture)
-9. [Accessibility](#accessibility)
-10. [Interaction Patterns](#interaction-patterns)
+6. [Responsive Breakpoints](#responsive-breakpoints)
+7. [Desktop Secondary Screens](#desktop-secondary-screens)
+8. [Components](#components)
+9. [Mobile Components](#mobile-components)
+10. [Fountain Format Styling](#fountain-format-styling)
+11. [Screen Architecture](#screen-architecture)
+12. [Accessibility](#accessibility)
+13. [Interaction Patterns](#interaction-patterns)
+14. [Implementation Status](#implementation-status)
 
 ---
 
@@ -195,30 +199,283 @@ Mobile uses a 4px base for tighter layouts on small screens:
 
 ## Layout Patterns
 
-### Desktop Layout: Three-Column Editor
+### Desktop Layout: Three-Column Editor (>= 1024px)
+
+Based on `mockup.html`. The desktop view uses a fixed three-panel CSS Grid with a top header, toolbar, and bottom format bar.
+
+#### Complete Desktop Wireframe
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  Header: Logo | Script | Shots | Storyboards | Breakdown       │
-├──────────┬──────────────────────────────────────────┬───────────┤
-│          │  Toolbar: Title | Scene 1/12 | View | Zoom │ Save │ Export│
-│          ├──────────────────────────────────────────┤           │
-│ Scenes  │                                          │ Character  │
-│          │  ┌────────────────────────────────────┐ │           │
-│ - Coffee│  │                                    │ │ JANE      │
-│ - Apt   │  │   INT. COFFEE SHOP - DAY           │ │ MARK      │
-│ - Train │  │                                    │ │ SARAH     │
-│          │  │   JANE sits at corner table...     │ │           │
-│ Stats   │  │                                    │ │ Current   │
-│ 12 scns │  │   MARK                             │ │ Scene     │
-│ 6 chars │  │   (quietly)                        │ │           │
-│          │  │   Mind if I join?                 │ │ Actions   │
-│          │  │                                    │ │ - Edit    │
-│          │  └────────────────────────────────────┘ │ - Export  │
-│          │                                          │ - Focus   │
-├──────────┴──────────────────────────────────────────┴───────────┤
-│  Format: [Scene] [Action] [Char] [Dial] [Paren] [Trans] │ Find │ Focus │
-└──────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────────┐
+│ HEADER (73px total, sticky top)                                                       │
+│ ┌────────────────────────────────────────────────────────────────────────────────────┐│
+│ │  Cutline                [Script] [Shots] [Storyboards] [Breakdown]     v1.0 Phase 1 ││
+│ │  Writer-First                              ↑ Nav Tabs                       ↑ Badge ││
+│ └────────────────────────────────────────────────────────────────────────────────────┘│
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│ TOOLBAR (grid-column: 1 / -1, spans full width)                                       │
+│ ┌─────────────────────────────────────────────────────────────────────────────────────┐│
+│ │ ┌────────────────┐ ┌─────────────────┐                              ┌──────────────┐││
+│ │ │ The Last Train │ │ ◀ Scene 1/12 ▶  │  Page 3/27  [View] [100%]  │ ● Saved  [⬆] │││
+│ │ │ ← Editable     │ │ Scene Selector  │  ↑Indicator  Toggle Zoom   │  ↑ Export    │││
+│ │ └────────────────┘ └─────────────────┘                              └──────────────┘││
+│ └─────────────────────────────────────────────────────────────────────────────────────┘│
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│ │                                                                                      │ │
+│ │ LEFT SIDEBAR (240px)            MAIN EDITOR (1fr)              RIGHT PANEL (200px)  │ │
+│ │                                                                                      │ │
+│ │ ┌──────────────────┐           ┌─────────────────────────────┐  ┌─────────────────┐ │ │
+│ │ │ Scenes        [+]│           │                             │  │ Characters  [+] │ │ │
+│ │ ├──────────────────┤           │  ┌───────────────────────┐  │  ├─────────────────┤ │ │
+│ │ │ ▪ Coffee Shop  1 │           │  │                       │  │  │ (J) JANE      42│ │ │
+│ │ │ ▪ Jane's Apt   2 │           │  │ INT. COFFEE SHOP-DAY  │  │  │ (M) MARK      38│ │ │
+│ │ │ ▪ Platform     3 │           │  │     ↑ amber scene     │  │  │ (S) SARAH     15│ │ │
+│ │ │ ▪ Train Car    4 │           │  │                       │  │  │ (C) CONDUCTOR  8│ │ │
+│ │ │ ▪ City Street  5 │           │  │ JANE (30s) sits at a  │  │  ├─────────────────┤ │ │
+│ │ │ ▪ Bedroom      6 │           │  │ corner table, laptop  │  │  │ Current Scene   │ │ │
+│ │ │ ... more ...     │           │  │ open. She types...    │  │  ├─────────────────┤ │ │
+│ │ ├──────────────────┤           │  │                       │  │  │ INT. Coffee     │ │ │
+│ │ │ Script Stats     │           │  │         MARK          │  │  │ Characters: 2   │ │ │
+│ │ │ Total Scenes: 12 │           │  │  (quietly)            │  │  │ Time: Day       │ │ │
+│ │ │ Characters:   6  │           │  │  Mind if I join?      │  │  │ [Add Scene Note]│ │ │
+│ │ │ Locations:    8  │           │  │                       │  │  ├─────────────────┤ │ │
+│ │ │ Est. Runtime: ~12│           │  │         JANE          │  │  │ Quick Actions   │ │ │
+│ │ │ Word Count: 8,427│           │  │  It's a free country. │  │  │ [Edit Scene]    │ │ │
+│ │ └──────────────────┘           │  └───────────────────────┘  │  │ [Export Scene]  │ │ │
+│ │                                │                             │  │ [Line Numbers]  │ │ │
+│ │ ▪ = INT icon (amber square)    │  Script Page Container:     │  └─────────────────┘ │ │
+│ │ ▲ = EXT icon (green diamond)   │  - max-width: 850px         │                      │ │
+│ │                                │  - background: #1e1e1e      │                      │ │
+│ │                                │  - padding: 40px 64px       │                      │ │
+│ │                                │  - border-radius: 8px       │                      │ │
+│ │                                │  - box-shadow (depth)       │                      │ │
+│ │                                └─────────────────────────────┘                      │ │
+│ └──────────────────────────────────────────────────────────────────────────────────────┘│
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│ FORMAT BAR (grid-column: 1 / -1, spans full width)                                    │
+│ ┌──────────────────────────────────────────────────────────────────────────────────────┐│
+│ │ [●Scene] [○Action] [●Char] [○Dial] [○Paren] [○Trans]  │  [🔍] [✓] [⊞]              ││
+│ │  ↑amber   ↑white   ↑blue  ↑white   ↑gray    ↑purple  │  Find Spell Focus            ││
+│ │                                                       │                              ││
+│ │ Color-coded element buttons with keyboard shortcuts   │  Right-aligned utility bar   ││
+│ └──────────────────────────────────────────────────────────────────────────────────────┘│
+└────────────────────────────────────────────────────────────────────────────────────────┘
+
+MEASUREMENTS:
+├── Header: 73px (sticky top, backdrop-filter blur)
+├── Toolbar: ~48px (flex layout, gap: 16px)
+├── Editor Container: calc(100vh - 73px)
+│   ├── Left Sidebar: 240px
+│   ├── Main Editor: 1fr (flex-grow)
+│   └── Right Panel: 200px
+└── Format Bar: ~44px
+
+COLOR CODING IN WIREFRAME:
+▪ = INT scene (amber square #fbbf24)
+▲ = EXT scene (green #22c55e)
+● = Active/filled indicator
+○ = Inactive/outline indicator
+```
+
+#### Header Component Details
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│ HEADER                                                                │
+│                                                                       │
+│  ┌─────────────────┐  ┌───────────────────────────┐  ┌─────────────┐ │
+│  │ Cutline         │  │ ┌─────────────────────────┐│  │ v1.0 Phase 1│ │
+│  │ Writer-First    │  │ │Script│Shots│Storyboards││  │  ↑ badge    │ │
+│  │ ↑ logo+tagline  │  │ │  ↑   │     │           ││  │             │ │
+│  └─────────────────┘  │ └─────────────────────────┘│  └─────────────┘ │
+│                       │       Nav Tabs              │                  │
+│                       └───────────────────────────┘                   │
+└──────────────────────────────────────────────────────────────────────┘
+
+CSS Classes:
+- .header: flex, justify-between, padding: 16px 24px
+- .logo: font-size: 24px, font-weight: 700, color: var(--accent)
+- .logo-tagline: font-size: 12px, color: var(--text-muted)
+- .nav-tabs: flex, gap: 4px, background: var(--bg-tertiary), padding: 4px
+- .nav-tab.active: background: var(--accent), color: white
+- .badge-success: background: rgba(34, 197, 94, 0.2), color: var(--success)
+```
+
+#### Toolbar Component Details
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ TOOLBAR                                                                       │
+│                                                                               │
+│  LEFT ZONE                         CENTER/RIGHT ZONE                         │
+│  ┌────────────────────────────┐    ┌────────────────────────────────────────┐│
+│  │ ┌────────────────────────┐ │    │ ┌─────┐ ┌─────┐ ┌──────┐ ┌───────────┐ ││
+│  │ │ The Last Train      ▼  │ │    │ │3/27p│ │View │ │ 100% │ │ ● Saved   │ ││
+│  │ └────────────────────────┘ │    │ │     │ │[1][2]│ │[-][+]│ │    [⬆]   │ ││
+│  │ ┌────────────────────────┐ │    │ └─────┘ └─────┘ └──────┘ └───────────┘ ││
+│  │ │ ◀  Scene 1 of 12   ▶  │ │    │  Page    View    Zoom     Save/Export  ││
+│  │ └────────────────────────┘ │    └────────────────────────────────────────┘│
+│  └────────────────────────────┘                                              │
+│                                                                               │
+│  - Script Title: editable input, 200px width                                 │
+│  - Scene Selector: dropdown with prev/next arrows                            │
+│  - Page Indicator: "Page X of Y"                                             │
+│  - View Toggle: [Script View] [Scene Cards] [Focus Mode]                     │
+│  - Zoom Controls: [-] 100% [+]  (range: 75%-150%, 5% steps)                  │
+│  - Save Status: ● green (saved) / ● amber pulsing (unsaved)                  │
+│  - Export Button: btn-secondary with icon                                    │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Left Sidebar - Scene Navigator
+
+```
+┌────────────────────────────┐
+│ LEFT SIDEBAR (240px)        │
+│                             │
+│ ┌─────────────────────────┐ │
+│ │ Scenes              [+] │ │  ← .sidebar-title with add button
+│ ├─────────────────────────┤ │
+│ │ ┌─────────────────────┐ │ │
+│ │ │ ▪ Coffee Shop     1 │ │ │  ← .scene-item.active
+│ │ │   ↑ amber           │ │ │    background: var(--accent-light)
+│ │ └─────────────────────┘ │ │    border-left: 3px solid var(--accent)
+│ │ ┌─────────────────────┐ │ │
+│ │ │ ▪ Jane's Apartment 2│ │ │  ← .scene-item (hover state)
+│ │ └─────────────────────┘ │ │    background: var(--bg-hover)
+│ │ ┌─────────────────────┐ │ │
+│ │ │ ▲ Train Platform  3 │ │ │  ← EXT scene (green diamond)
+│ │ └─────────────────────┘ │ │
+│ │ ... more scenes        │ │
+│ ├─────────────────────────┤ │
+│ │ Script Stats            │ │  ← .sidebar-section
+│ │ ─────────────────────── │ │
+│ │ Total Scenes      12    │ │
+│ │ Characters         6    │ │
+│ │ Locations          8    │ │
+│ │ Est. Runtime    ~12 min │ │
+│ │ Word Count      8,427   │ │
+│ └─────────────────────────┘ │
+└────────────────────────────┘
+
+Scene Icon Colors:
+- INT: amber (#fbbf24) - square icon
+- EXT: green (#22c55e) - diamond icon
+```
+
+#### Right Sidebar - Characters & Tools
+
+```
+┌────────────────────────────┐
+│ RIGHT PANEL (200px)         │
+│                             │
+│ ┌─────────────────────────┐ │
+│ │ Characters          [+] │ │
+│ ├─────────────────────────┤ │
+│ │ ┌─────────────────────┐ │ │
+│ │ │ (J) JANE         42 │ │ │  ← .character-item
+│ │ │  ↑ avatar accent   │ │ │    avatar colors vary
+│ │ └─────────────────────┘ │ │
+│ │ ┌─────────────────────┐ │ │
+│ │ │ (M) MARK         38 │ │ │  avatar: #f59e0b (amber)
+│ │ └─────────────────────┘ │ │
+│ │ ┌─────────────────────┐ │ │
+│ │ │ (S) SARAH        15 │ │ │  avatar: #22c55e (green)
+│ │ └─────────────────────┘ │ │
+│ │ ┌─────────────────────┐ │ │
+│ │ │ (C) CONDUCTOR     8 │ │ │  avatar: #ec4899 (pink)
+│ │ └─────────────────────┘ │ │
+│ ├─────────────────────────┤ │
+│ │ Current Scene           │ │
+│ │ ─────────────────────── │ │
+│ │ INT. COFFEE SHOP        │ │
+│ │ Characters: Jane, Mark  │ │
+│ │ Time: Day               │ │
+│ │ [Add Scene Note]        │ │
+│ ├─────────────────────────┤ │
+│ │ Quick Actions           │ │
+│ │ ─────────────────────── │ │
+│ │ [Edit Scene]            │ │
+│ │ [Export Scene]          │ │
+│ │ [Line Numbers]          │ │
+│ └─────────────────────────┘ │
+└────────────────────────────┘
+
+Avatar Color Palette:
+- Primary: var(--accent) #6366f1
+- Amber: #f59e0b
+- Green: #22c55e
+- Pink: #ec4899
+```
+
+#### Main Editor - Script Page
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ MAIN EDITOR (.editor-main)                                                   │
+│                                                                              │
+│     ┌─────────────────────────────────────────────────────────────────┐     │
+│     │ .script-page                                                     │     │
+│     │ max-width: 850px                                                 │     │
+│     │ background: #1e1e1e                                              │     │
+│     │ padding: 40px 64px                                               │     │
+│     │ border: 1px solid var(--border-color)                            │     │
+│     │ box-shadow: 0 4px 20px rgba(0,0,0,0.4)                           │     │
+│     │ ┌─────────────────────────────────────────────────────────────┐ │     │
+│     │ │ .script-editor (Courier Prime, 13pt, line-height: 1.2)      │ │     │
+│     │ │                                                              │ │     │
+│     │ │ INT. COFFEE SHOP - DAY                    ← .fountain-scene │ │     │
+│     │ │     (amber, bold, uppercase, margin-top: 1.5rem)            │ │     │
+│     │ │                                                              │ │     │
+│     │ │ JANE (30s) sits at a corner table, laptop open.  ← action   │ │     │
+│     │ │ (white, max-width: 60ch)                        ← action   │ │     │
+│     │ │                                                              │ │     │
+│     │ │              MARK                          ← .fountain-char │ │     │
+│     │ │           (quietly)                       ← .fountain-paren │ │     │
+│     │ │        Mind if I join?                     ← .fountain-dial │ │     │
+│     │ │                                                              │ │     │
+│     │ │                  JANE                                       │ │     │
+│     │ │         without looking up                                  │ │     │
+│     │ │          It's a free country.                               │ │     │
+│     │ │                                                              │ │     │
+│     │ │                                                  CUT TO:    │ │     │
+│     │ │                                              ← .fountain-trans│ │     │
+│     │ └─────────────────────────────────────────────────────────────┘ │     │
+│     └─────────────────────────────────────────────────────────────────┘     │
+│                                                                              │
+│ caret-color: var(--accent)  ← Branded cursor in accent color               │
+│ spellcheck: false            ← Disabled for better performance             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Format Bar
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ FORMAT BAR (.format-bar)                                                      │
+│                                                                               │
+│  ┌────────────────────────────────────────┐  ┌────────────────────────────┐  │
+│  │ ELEMENT BUTTONS (left aligned)         │  │ UTILITY (right aligned)    │  │
+│  │                                        │  │                            │  │
+│  │ [●Scene] [○Action] [●Char] [○Dial]    │  │ [🔍] [✓] [⊞]              │  │
+│  │ [○Paren] [○Trans]                      │  │ Find Spell Focus           │  │
+│  │                                        │  │                            │  │
+│  │ ↑ Color dots match fountain colors:    │  │ Find: Cmd/Ctrl+F           │  │
+│  │   Scene: amber (#fbbf24)               │  │ Spell: check icon          │  │
+│  │   Action: white                        │  │ Focus: distraction-free    │  │
+│  │   Character: blue (#60a5fa)            │  │                            │  │
+│  │   Dialogue: white                      │  │                            │  │
+│  │   Parenthetical: gray (#9ca3af)        │  │                            │  │
+│  │   Transition: purple (#c084fc)         │  │                            │  │
+│  └────────────────────────────────────────┘  └────────────────────────────┘  │
+│                                                                               │
+│  .format-btn:                                                                │
+│  - padding: 8px 16px                                                         │
+│  - border-radius: 8px                                                        │
+│  - min-height: 36px                                                          │
+│  - gap between dot icon and label: 4px                                       │
+│  - .active: background: var(--accent), color: white                          │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
 
 **Grid Definition**:
@@ -231,36 +488,541 @@ Mobile uses a 4px base for tighter layouts on small screens:
 }
 ```
 
-### Mobile Layout: Single Column
+### Mobile Layout: Single Column (< 768px)
+
+Based on `mockup-mobile.html`. The mobile view uses a single-column stack with bottom navigation, slide-over panels, and a floating action button. **12 distinct screens** cover all mobile workflows.
+
+#### Mobile Screen 1: Main Script Editor (Primary)
 
 ```
-┌─────────────────┐
-│ ☰  The Last Train │
-├─────────────────┤
-│ ◀ Scene 1 of 12 ▶│
-├─────────────────┤
-│                 │
-│ INT. COFFEE     │
-│ SHOP - DAY      │
-│                 │
-│ JANE sits...    │
-│                 │
-│ MARK           │
-│ (quietly)      │
-│ Mind if I join?│
-│                 │
-├─────────────────┤
-│ [Scene][Char][...]│
-├─────────────────┤
-│ [Script][Break][Shots]│
-└─────────────────┘
+┌─────────────────────────────────┐
+│ MOBILE TOP BAR (48px)           │
+│ ┌─────────────────────────────┐ │
+│ │[☰]  The Last Train    [📄][⊞]│ │
+│ │ ↑      ↑ title      ↑view    │ │
+│ └─────────────────────────────┘ │
+├─────────────────────────────────┤
+│ SCENE NAV BAR (44px)            │
+│ ┌─────────────────────────────┐ │
+│ │   [←]  Scene 1 of 12  [→]   │ │
+│ │   ↑      ↑ nav        ↑     │ │
+│ └─────────────────────────────┘ │
+├─────────────────────────────────┤
+│                                 │
+│ SCRIPT EDITOR (flex: 1)         │
+│ ┌─────────────────────────────┐ │
+│ │ .script-page                │ │
+│ │ background: #1e1e1e         │ │
+│ │ padding: 16px               │ │
+│ │ border: 1px solid #333      │ │
+│ │ ┌─────────────────────────┐ │ │
+│ │ │ INT. COFFEE SHOP - DAY  │ │ │
+│ │ │                         │ │ │
+│ │ │ JANE (30s) sits at a    │ │ │
+│ │ │ corner table, laptop    │ │ │
+│ │ │ open. She types...      │ │ │
+│ │ │                         │ │ │
+│ │ │         MARK            │ │ │
+│ │ │      (quietly)          │ │ │
+│ │ │   Mind if I join?       │ │ │
+│ │ │                         │ │ │
+│ │ │         JANE            │ │ │
+│ │ │   It's a free country.  │ │ │
+│ │ └─────────────────────────┘ │ │
+│ └─────────────────────────────┘ │
+│                                 │
+│        ┌───┐                    │
+│        │ + │  ← FAB (56x56)     │
+│        └───┘    bottom-right    │
+│                                 │
+├─────────────────────────────────┤
+│ FORMAT BAR (52px, scrollable)   │
+│ ┌─────────────────────────────┐ │
+│ │[Scene][Char][Dial][Act][...]│ │
+│ │ ↑ 44px min-height buttons   │ │
+│ └─────────────────────────────┘ │
+├─────────────────────────────────┤
+│ BOTTOM NAV (64px + safe area)   │
+│ ┌─────────────────────────────┐ │
+│ │[Script][Shots][Boards][Break]│ │
+│ │  ↑      ↑       ↑       ↑   │ │
+│ │ icon   icon    icon    icon  │ │
+│ │ label  label  label   label │ │
+│ └─────────────────────────────┘ │
+│ ═══════════════════════════════ │ ← Home indicator
+└─────────────────────────────────┘
+
+Touch Targets (Apple HIG):
+- All interactive elements: min 44px × 44px
+- Format buttons: min-height 44px
+- Nav items: min-height 44px
+- Scene nav buttons: 44px × 44px
+```
+
+#### Mobile Screen 2: Focus Mode
+
+```
+┌─────────────────────────────────┐
+│ MINIMAL TOP BAR                 │
+│ ┌─────────────────────────────┐ │
+│ │[←]      Focus Mode     [⚙] │ │
+│ │ ↑          ↑          ↑     │ │
+│ │ back    label     settings  │ │
+│ └─────────────────────────────┘ │
+├─────────────────────────────────┤
+│                                 │
+│ CLEAN SCRIPT VIEW (flex: 1)     │
+│ ┌─────────────────────────────┐ │
+│ │                             │ │
+│ │ INT. COFFEE SHOP - DAY      │ │
+│ │                             │ │
+│ │ JANE sits at a corner       │ │
+│ │ table. Types furiously.     │ │
+│ │                             │ │
+│ │         MARK                │ │
+│ │      (quietly)              │ │
+│ │   Mind if I join?           │ │
+│ │                             │ │
+│ │         JANE                │ │
+│ │   It's a free country.      │ │
+│ │                             │ │
+│ │ Beat.                       │ │
+│ │                             │ │
+│ │         MARK                │ │
+│ │   Jane, please. We need     │ │
+│ │   to talk about yesterday.  │ │
+│ │                             │ │
+│ └─────────────────────────────┘ │
+│                                 │
+├─────────────────────────────────┤
+│ MINIMAL BOTTOM BAR              │
+│ ┌─────────────────────────────┐ │
+│ │  [Scene ↑]  [Scene ↓]  [Exit]│ │
+│ │     ↑          ↑        ↑    │ │
+│ │   nav up   nav down   exit   │ │
+│ └─────────────────────────────┘ │
+│ ═══════════════════════════════ │
+└─────────────────────────────────┘
+
+Focus Mode CSS:
+.focus-mode .bottom-nav { display: none; }
+.focus-mode .fab { display: none; }
+.focus-mode .format-bar { display: none; }
+```
+
+#### Mobile Slide-Over Panel (Scenes)
+
+```
+┌────────────────────────────┬────────┐
+│ SCENE PANEL (85% / 320px)  │ SCRIM  │
+│                            │        │
+│ ┌────────────────────────┐ │ ░░░░░░ │
+│ │ [×]  Scenes       [+]  │ │ ░░░░░░ │
+│ │  ↑      ↑          ↑   │ │ ░░░░░░ │
+│ │ close  title     add   │ │ ░░░░░░ │
+│ └────────────────────────┘ │ ░░░░░░ │
+│                            │ ░░░░░░ │
+│ ┌────────────────────────┐ │ ░░░░░░ │
+│ │ ▪ Coffee Shop          │ │ ░░░░░░ │
+│ │   INT • Day      (actv)│ │ ░░░░░░ │
+│ │   ↑ amber border-left  │ │ ░░░░░░ │
+│ │   accent background    │ │ ░░░░░░ │
+│ └────────────────────────┘ │ ░░░░░░ │
+│ ┌────────────────────────┐ │ ░░░░░░ │
+│ │ ▪ Jane's Apartment     │ │ ░░░░░░ │
+│ │   INT • Night          │ │ ░░░░░░ │
+│ └────────────────────────┘ │ ░░░░░░ │
+│ ┌────────────────────────┐ │ ░░░░░░ │
+│ │ ▲ Train Platform       │ │ ░░░░░░ │
+│ │   EXT • Day            │ │ ░░░░░░ │
+│ │   ↑ green diamond      │ │ ░░░░░░ │
+│ └────────────────────────┘ │ ░░░░░░ │
+│ ┌────────────────────────┐ │ ░░░░░░ │
+│ │ ▪ Train Car            │ │ ░░░░░░ │
+│ │   INT • Day            │ │ ░░░░░░ │
+│ └────────────────────────┘ │ ░░░░░░ │
+│                            │        │
+│ ───────────────────────── │        │
+│ Script Stats               │        │
+│ ┌──────────┬──────────┐   │        │
+│ │    12    │    6     │   │        │
+│ │  Scenes  │ Characters│  │        │
+│ └──────────┴──────────┘   │        │
+└────────────────────────────┴────────┘
+
+Slide Panel CSS:
+.slide-panel {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    z-index: 5;
+}
+.slide-panel.open { transform: translateX(0); }
+```
+
+#### Mobile Quick Format Overlay (FAB Triggered)
+
+```
+┌─────────────────────────────────┐
+│                                 │
+│   (script content dimmed)       │
+│                                 │
+│                                 │
+├─────────────────────────────────┤ ← slides up from bottom
+│ ┌─────────────────────────────┐ │
+│ │ Format Element          [✕] │ │
+│ └─────────────────────────────┘ │
+│                                 │
+│ ┌───────────┬───────────────────┐│
+│ │  Scene    │    Action         ││
+│ │  (amber)  │    (white)        ││
+│ ├───────────┼───────────────────┤│
+│ │ Character │    Dialogue       ││
+│ │  (blue)   │    (white)        ││
+│ ├───────────┼───────────────────┤│
+│ │Parenthetical│  Transition     ││
+│ │   (gray)    │    (purple)     ││
+│ ├───────────┼───────────────────┤│
+│ │   Shot    │     Note          ││
+│ │  (orange) │    (default)      ││
+│ └───────────┴───────────────────┘│
+│                                 │
+│ (bottom nav underneath, dimmed) │
+│ ═══════════════════════════════ │
+└─────────────────────────────────┘
+
+Quick Format CSS:
+.quick-format {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    transform: translateY(100%);
+    transition: transform 0.2s;
+    z-index: 20;
+}
+.quick-format.show { transform: translateY(0); }
+.quick-format-btn { min-height: 44px; }
+```
+
+#### Mobile Screen 5: Shot List
+
+```
+┌─────────────────────────────────┐
+│ MOBILE TOP BAR                  │
+│ ┌─────────────────────────────┐ │
+│ │[←]      Shots        [5/5] │ │
+│ └─────────────────────────────┘ │
+├─────────────────────────────────┤
+│ SCENE HEADER                    │
+│ ┌─────────────────────────────┐ │
+│ │ Scene 1                      │ │
+│ │ INT. COFFEE SHOP - DAY       │ │
+│ └─────────────────────────────┘ │
+├─────────────────────────────────┤
+│                                 │
+│ SHOT CARDS (scrollable)         │
+│ ┌─────────────────────────────┐ │
+│ │ ┌───┐ Wide Shot             │ │
+│ │ │ 1 │ Establish coffee...   │ │
+│ │ └───┘                        │ │
+│ │ ↑ shot number (accent bg)   │ │
+│ └─────────────────────────────┘ │
+│ ┌─────────────────────────────┐ │
+│ │ ┌───┐ Medium                │ │
+│ │ │ 2 │ Jane typing...        │ │
+│ │ └───┘                        │ │
+│ └─────────────────────────────┘ │
+│ ┌─────────────────────────────┐ │
+│ │ ┌───┐ Close-up              │ │
+│ │ │ 3 │ Jane's expression...  │ │
+│ │ └───┘                        │ │
+│ └─────────────────────────────┘ │
+│                                 │
+├─────────────────────────────────┤
+│ BOTTOM SHEET                    │
+│ ┌─────────────────────────────┐ │
+│ │         ═════                │ │ ← drag handle
+│ │ [Confirm Shot List →]       │ │
+│ │     ↑ full-width btn        │ │
+│ └─────────────────────────────┘ │
+├─────────────────────────────────┤
+│ BOTTOM NAV                      │
+│ [Script] [●Shots] [Boards] [Brk]│
+│ ═══════════════════════════════ │
+└─────────────────────────────────┘
+```
+
+#### Mobile Screen 7: Storyboards
+
+```
+┌─────────────────────────────────┐
+│ MOBILE TOP BAR                  │
+│ ┌─────────────────────────────┐ │
+│ │[←]   Storyboards     [5/5] │ │
+│ └─────────────────────────────┘ │
+├─────────────────────────────────┤
+│ SCENE HEADER                    │
+│ ┌─────────────────────────────┐ │
+│ │ Scene 1                      │ │
+│ │ INT. COFFEE SHOP - DAY       │ │
+│ └─────────────────────────────┘ │
+├─────────────────────────────────┤
+│ FILMSTRIP (horizontal scroll)   │
+│ ┌────┬────┬────┬────┬────┐     │
+│ │[1] │ 2  │ 3  │ 4  │ 5  │     │
+│ │ ■■ │    │    │    │    │     │
+│ └────┴────┴────┴────┴────┘     │
+│  ↑ selected border: accent      │
+├─────────────────────────────────┤
+│                                 │
+│ MAIN STORYBOARD PANEL           │
+│ ┌─────────────────────────────┐ │
+│ │                             │ │
+│ │   ┌───────────────────┐     │ │
+│ │   │                   │     │ │
+│ │   │  Storyboard 1     │     │ │
+│ │   │  (16:9 ratio)     │     │ │
+│ │   │                   │     │ │
+│ │   └───────────────────┘     │ │
+│ │                             │ │
+│ └─────────────────────────────┘ │
+│                                 │
+│ PANEL DETAILS CARD              │
+│ ┌─────────────────────────────┐ │
+│ │ Shot 1: Wide    [Confirmed] │ │
+│ │ Establish coffee shop...    │ │
+│ │ [Edit] [Regenerate]         │ │
+│ └─────────────────────────────┘ │
+│                                 │
+├─────────────────────────────────┤
+│ BOTTOM NAV                      │
+│ [Script] [Shots] [●Boards] [Brk]│
+│ ═══════════════════════════════ │
+└─────────────────────────────────┘
+
+Filmstrip CSS:
+.filmstrip-thumb { width: 70px; border: 2px solid transparent; }
+.filmstrip-thumb.selected { border-color: var(--accent); }
+```
+
+#### Mobile Screen 12: Project List (Landing)
+
+```
+┌─────────────────────────────────┐
+│ MOBILE TOP BAR                  │
+│ ┌─────────────────────────────┐ │
+│ │         My Projects    [•••]│ │
+│ └─────────────────────────────┘ │
+├─────────────────────────────────┤
+│                                 │
+│ NEW PROJECT CARDS               │
+│ ┌─────────────┬───────────────┐ │
+│ │ ┌─────────┐ │ ┌───────────┐ │ │
+│ │ │    +    │ │ │     ↑     │ │ │
+│ │ │  New    │ │ │  Import   │ │ │
+│ │ │ Project │ │ │           │ │ │
+│ │ └─────────┘ │ └───────────┘ │ │
+│ │   accent    │   dashed     │ │
+│ │   gradient  │   border     │ │
+│ └─────────────┴───────────────┘ │
+│                                 │
+│ Recent Projects                 │
+│ ┌─────────────────────────────┐ │
+│ │ ┌────┐ The Last Train       │ │
+│ │ │ 📄 │ 12 scenes • 4 min ago│ │
+│ │ │    │ [Ready]              │ │
+│ │ └────┘                      │ │
+│ └─────────────────────────────┘ │
+│ ┌─────────────────────────────┐ │
+│ │ ┌────┐ Coffee Shop Meet     │ │
+│ │ │ 📄 │ 3 scenes • Yesterday │ │
+│ │ │    │ [Draft]              │ │
+│ │ └────┘                      │ │
+│ └─────────────────────────────┘ │
+│                                 │
+├─────────────────────────────────┤
+│ BOTTOM NAV                      │
+│ [●Projects] [Settings]          │
+│ ═══════════════════════════════ │
+└─────────────────────────────────┘
 ```
 
 **Key Mobile Patterns**:
-- **Bottom Navigation**: 4 tabs (Script, Breakdown, Shots, Storyboards)
-- **Slide-Over Panels**: Scene navigator slides in from left
-- **FAB**: Floating action button for quick format access
+- **Bottom Navigation**: 4 tabs (Script, Shots, Boards, Breakdown) - 64px height + safe area
+- **Slide-Over Panels**: Scene navigator slides in from left (85% width, max 320px)
+- **FAB**: Floating action button (56x56, accent blue, bottom-right above bottom nav)
+- **Quick Format**: 4x2 grid overlay triggered by FAB, color-coded to fountain colors
 - **Touch Targets**: Minimum 44px per Apple HIG
+- **Focus Mode**: Hides bottom nav, FAB, and format bar
+- **Home Indicator**: 120px × 5px, centered at bottom, rgba white
+
+### Tablet Layout (768px - 1023px)
+
+Same three-panel grid as desktop with narrower sidebars:
+
+```css
+.editor-container {
+    grid-template-columns: 200px 1fr 180px;
+}
+```
+
+---
+
+## Desktop Secondary Screens
+
+### Shot List Screen
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────────┐
+│ SHOT LIST SCREEN                                                                     │
+│                                                                                      │
+│ ┌──────────────────────────────────────────────────────────────────────────────────┐ │
+│ │ SECTION HEADER                                                                    │ │
+│ │ ┌────────────────────────────────────────────┐  ┌──────────────────────────────┐ │ │
+│ │ │ Shot List                                   │  │ [AI Suggestions] [+ Add Shot]│ │ │
+│ │ │ Scene 1: INT. COFFEE SHOP - DAY             │  │                              │ │ │
+│ │ └────────────────────────────────────────────┘  └──────────────────────────────┘ │ │
+│ └──────────────────────────────────────────────────────────────────────────────────┘ │
+│                                                                                      │
+│ ┌──────────────────────────────────────────────────────────────────────────────────┐ │
+│ │ SHOT TABLE (.shot-table)                                                          │ │
+│ │ ┌──────────────────────────────────────────────────────────────────────────────┐ │ │
+│ │ │ #  │ Type        │ Angle      │ Movement │ Characters  │ Description       │Dur│ ✓│ │ │
+│ │ ├────┼─────────────┼────────────┼──────────┼─────────────┼───────────────────┼───┼──┤ │ │
+│ │ │ 1  │ [Wide]      │ Eye level  │ Static   │ Jane, Mark  │ Establish coffee  │4s │✓ │ │ │
+│ │ │    │ ↑ red badge │            │          │             │ shop, Jane at     │   │  │ │ │
+│ │ ├────┼─────────────┼────────────┼──────────┼─────────────┼───────────────────┼───┼──┤ │ │
+│ │ │ 2  │ [Medium]    │ Eye level  │ Pan rt   │ Jane        │ Jane typing       │3s │✓ │ │ │
+│ │ │    │ ↑ amber     │            │          │             │ furiously on      │   │  │ │ │
+│ │ ├────┼─────────────┼────────────┼──────────┼─────────────┼───────────────────┼───┼──┤ │ │
+│ │ │ 3  │ [Close-up]  │ Eye level  │ Static   │ Jane        │ Jane's focused    │2s │✓ │ │ │
+│ │ │    │ ↑ purple    │            │          │             │ expression        │   │  │ │ │
+│ │ ├────┼─────────────┼────────────┼──────────┼─────────────┼───────────────────┼───┼──┤ │ │
+│ │ │ 4  │ [Medium]    │ Low angle  │ Tracking │ Mark        │ Mark walks toward │3s │✓ │ │ │
+│ │ ├────┼─────────────┼────────────┼──────────┼─────────────┼───────────────────┼───┼──┤ │ │
+│ │ │ 5  │ [Two-shot]  │ Eye level  │ Static   │ Jane, Mark  │ Mark approaches,  │4s │✓ │ │ │
+│ │ │    │ ↑ pink      │            │          │             │ Jane ignores      │   │  │ │ │
+│ │ └──────────────────────────────────────────────────────────────────────────────┘ │ │
+│ └──────────────────────────────────────────────────────────────────────────────────┘ │
+│                                                                                      │
+│ ┌──────────────────────────────────────────────────────────────────────────────────┐ │
+│ │ CONFIRM ACTION                                                                    │ │
+│ │                    ┌──────────────────────────────────────────┐                  │ │
+│ │                    │ ✓ Confirm Shot List & Generate Storyboards│                 │ │
+│ │                    └──────────────────────────────────────────┘                  │ │
+│ │                    5 shots • Est. cost: $0.01 • Est. time: ~25s                  │ │
+│ └──────────────────────────────────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────────────────────────────┘
+
+Shot Type Badges:
+- Wide: #dc2626 (red)
+- Medium: #f59e0b (amber)
+- Close-up: #8b5cf6 (purple)
+- Two-shot: #ec4899 (pink)
+```
+
+### Storyboards Screen
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────────┐
+│ STORYBOARDS SCREEN                                                                   │
+│                                                                                      │
+│ ┌──────────────────────────────────────────────────────────────────────────────────┐ │
+│ │ SECTION HEADER                                                                    │ │
+│ │ Storyboards                                          [Export All]                │ │
+│ │ Scene 1: INT. COFFEE SHOP - DAY                                                  │ │
+│ └──────────────────────────────────────────────────────────────────────────────────┘ │
+│                                                                                      │
+│ ┌──────────────────────────────────────────────────────────────────────────────────┐ │
+│ │ FILMSTRIP (.filmstrip) - horizontal scroll                                        │ │
+│ │ ┌─────────────────────────────────────────────────────────────────────────────┐  │ │
+│ │ │ ┌──────────┐┌──────────┐┌──────────┐┌──────────┐┌──────────┐               │  │ │
+│ │ │ │    1     ││    2     ││    3     ││    4     ││    5     │               │  │ │
+│ │ │ │ [image]  ││ [image]  ││ [image]  ││ [image]  ││ [image]  │               │  │ │
+│ │ │ │ 1 │ Wide ││ 2 │ Med  ││ 3 │ CU   ││ 4 │ Med  ││ 5 │ 2-Sh │               │  │ │
+│ │ │ └──────────┘└──────────┘└──────────┘└──────────┘└──────────┘               │  │ │
+│ │ │     ↑                                                              ↑          │  │ │
+│ │ │ selected (accent border)                               normal (no border)    │  │ │
+│ │ └─────────────────────────────────────────────────────────────────────────────┘  │ │
+│ │                                                                                   │ │
+│ │ .filmstrip-panel: width: 160px, border: 2px transparent                          │ │
+│ │ .filmstrip-panel.selected: border-color: var(--accent)                           │ │
+│ └──────────────────────────────────────────────────────────────────────────────────┘ │
+│                                                                                      │
+│ ┌────────────────────────────────────────┬─────────────────────────────────────────┐│
+│ │ PANEL DETAIL (.card)                   │ SHOT SETTINGS (.card)                   ││
+│ │                                        │                                         ││
+│ │ Panel 1: Wide Establishing             │ Shot Settings                           ││
+│ │ [Confirmed]                            │ ──────────────────────────────────────  ││
+│ │                                        │ Visual Style                            ││
+│ │ ┌────────────────────────────────────┐ │ [Cinematic Drama          ▼]           ││
+│ │ │                                    │ │                                         ││
+│ │ │   ┌──────────────────────────┐     │ │ Storyboard Style                        ││
+│ │ │   │                          │     │ │ ┌─────────┬─────────┐                  ││
+│ │ │   │    Storyboard Image      │     │ │ │[Pencil] │ [Ink]   │                  ││
+│ │ │   │    (400×225, 16:9)       │     │ │ ├─────────┼─────────┤                  ││
+│ │ │   │                          │     │ │ │[Manga]  │[Watercol]│                  ││
+│ │ │   └──────────────────────────┘     │ │ └─────────┴─────────┘                  ││
+│ │ │                                    │ │                                         ││
+│ │ └────────────────────────────────────┘ │ Aspect Ratio: 16:9                     ││
+│ │                                        │ Color Mode: Full Color                 ││
+│ │ Type:        Wide (Establishing)       │                                         ││
+│ │ Angle:       Eye Level                 │ [Generate Storyboard]                   ││
+│ │ Characters:  Jane, Mark                │                                         ││
+│ │                                        │                                         ││
+│ │ [Edit] [Regenerate]                    │                                         ││
+│ └────────────────────────────────────────┴─────────────────────────────────────────┘│
+└──────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Breakdown Screen
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────────┐
+│ SCRIPT BREAKDOWN SCREEN                                                              │
+│                                                                                      │
+│ ┌──────────────────────────────────────────────────────────────────────────────────┐ │
+│ │ SECTION HEADER                                                                    │ │
+│ │ Script Breakdown                                     [Export Report]             │ │
+│ │ The Last Train — Automatic script analysis                                       │ │
+│ └──────────────────────────────────────────────────────────────────────────────────┘ │
+│                                                                                      │
+│ ┌──────────────────────────────────────────────────────────────────────────────────┐ │
+│ │ STATS GRID (.breakdown-stats, 4 columns)                                          │ │
+│ │ ┌─────────────────┬─────────────────┬─────────────────┬─────────────────┐        │ │
+│ │ │ ┌─────────────┐ │ ┌─────────────┐ │ ┌─────────────┐ │ ┌─────────────┐ │        │ │
+│ │ │ │     12      │ │ │      6      │ │ │      8      │ │ │    ~12      │ │        │ │
+│ │ │ │   Scenes    │ │ │ Characters  │ │ │  Locations  │ │ │   Minutes   │ │        │ │
+│ │ │ └─────────────┘ │ └─────────────┘ │ └─────────────┘ │ └─────────────┘ │        │ │
+│ │ │   stat-card    │   stat-card    │   stat-card    │   stat-card     │        │ │
+│ │ │ stat-value:    │ stat-value:    │ stat-value:    │ stat-value:     │        │ │
+│ │ │  32px, accent  │  32px, accent  │  32px, accent  │  32px, accent   │        │ │
+│ │ └─────────────────┴─────────────────┴─────────────────┴─────────────────┘        │ │
+│ └──────────────────────────────────────────────────────────────────────────────────┘ │
+│                                                                                      │
+│ ┌──────────────────────────────────────────────────────────────────────────────────┐ │
+│ │ THREE-COLUMN CARD GRID (.grid-3)                                                  │ │
+│ │                                                                                  │ │
+│ │ ┌────────────────────┐ ┌────────────────────┐ ┌────────────────────┐            │ │
+│ │ │ Scenes    [12]     │ │ Characters  [6]    │ │ Locations   [8]    │            │ │
+│ │ ├────────────────────┤ ├────────────────────┤ ├────────────────────┤            │ │
+│ │ │ ┌────────────────┐ │ │ ┌────────────────┐ │ │ ┌────────────────┐ │            │ │
+│ │ │ │▪ 1. Coffee Shop│ │ │ │(J) JANE     42 │ │ │ │▪ Coffee Shop 2s│ │            │ │
+│ │ │ │             INT │ │ │ │(M) MARK     38 │ │ │ │▪ Jane's Apt 3s │ │            │ │
+│ │ │ └────────────────┘ │ │ │(S) SARAH    15 │ │ │ │▲ Platform    4s│ │            │ │
+│ │ │ ┌────────────────┐ │ │ └────────────────┘ │ │ └────────────────┘ │            │ │
+│ │ │ │▪ 2. Apt        │ │ │                    │ │                    │            │ │
+│ │ │ │             INT │ │ │                    │ │                    │            │ │
+│ │ │ └────────────────┘ │ │                    │ │                    │            │ │
+│ │ │ ┌────────────────┐ │ │                    │ │                    │            │ │
+│ │ │ │▲ 3. Platform   │ │ │                    │ │                    │            │ │
+│ │ │ │             EXT │ │ │                    │ │                    │            │ │
+│ │ │ └────────────────┘ │ │                    │ │                    │            │ │
+│ │ │ [View All 12]      │ │                    │ │                    │            │ │
+│ │ └────────────────────┘ └────────────────────┘ └────────────────────┘            │ │
+│ └──────────────────────────────────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -269,12 +1031,28 @@ Mobile uses a 4px base for tighter layouts on small screens:
 ### Buttons
 
 ```css
+/* Base Button */
+.btn {
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--space-2);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    transition: all 0.2s;
+}
+
 /* Primary Button */
 .btn-primary {
     background: var(--accent);
     color: white;
-    padding: var(--space-2) var(--space-4);
-    border-radius: var(--space-2);
+}
+.btn-primary:hover {
+    background: var(--accent-hover);
 }
 
 /* Secondary Button */
@@ -283,11 +1061,23 @@ Mobile uses a 4px base for tighter layouts on small screens:
     color: var(--text-primary);
     border: 1px solid var(--border-color);
 }
+.btn-secondary:hover {
+    background: var(--bg-hover);
+}
 
 /* Small Button */
 .btn-sm {
     padding: var(--space-1) var(--space-3);
     font-size: var(--font-size-xs);
+}
+
+/* Icon in Button */
+.btn .icon {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
 }
 ```
 
@@ -446,9 +1236,419 @@ Mobile uses a 4px base for tighter layouts on small screens:
 
 ---
 
-## Fountain Format Styling
+## Mobile Components
 
-### Element Formatting
+Mobile-specific components following Apple HIG with 44px minimum touch targets.
+
+### Mobile Top Bar
+
+```css
+.mobile-top-bar {
+    padding: 12px 16px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 48px;
+}
+
+.script-title-top {
+    font-size: 14px;
+    font-weight: 600;
+}
+```
+
+### Scene Navigation Bar
+
+```css
+.scene-nav-bar {
+    padding: 8px 16px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+}
+
+.scene-nav-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    min-width: 44px;
+    min-height: 44px;
+    cursor: pointer;
+}
+```
+
+### Bottom Navigation
+
+```css
+.bottom-nav {
+    background: var(--bg-secondary);
+    padding: 8px 16px;
+    padding-bottom: 20px; /* Safe area */
+    display: flex;
+    justify-content: space-around;
+    border-top: 1px solid var(--border-color);
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+}
+
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    min-height: 44px;
+    padding: 4px;
+}
+
+.nav-item.active {
+    color: var(--accent);
+}
+
+.nav-item svg {
+    width: 22px;
+    height: 22px;
+}
+```
+
+### Floating Action Button (FAB)
+
+```css
+.fab {
+    position: absolute;
+    bottom: 80px; /* Above bottom nav */
+    right: 16px;
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    background: var(--accent);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+    border: none;
+    z-index: 4;
+}
+```
+
+### Mobile Format Bar
+
+```css
+.format-bar {
+    background: var(--bg-tertiary);
+    padding: 8px;
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    border-top: 1px solid var(--border-color);
+}
+
+.format-bar::-webkit-scrollbar {
+    display: none;
+}
+
+.format-btn {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    border: none;
+    font-size: 12px;
+    font-weight: 500;
+    min-height: 44px; /* HIG touch target */
+    white-space: nowrap;
+}
+
+.format-btn.active {
+    background: var(--accent);
+    color: white;
+}
+```
+
+### Quick Format Overlay
+
+4×2 grid triggered by FAB.
+
+```css
+.quick-format {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+    padding: 16px;
+    transform: translateY(100%);
+    transition: transform 0.2s;
+    z-index: 20;
+}
+
+.quick-format.show {
+    transform: translateY(0);
+}
+
+.quick-format-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+.quick-format-btn {
+    padding: 12px;
+    border-radius: 8px;
+    background: var(--bg-tertiary);
+    border: none;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 500;
+    min-height: 44px;
+}
+```
+
+**Quick Format Button Colors**:
+| Button | Color | Variable |
+|--------|-------|----------|
+| Scene | amber | `var(--fountain-scene)` |
+| Action | white | `var(--fountain-action)` |
+| Character | blue | `var(--fountain-character)` |
+| Dialogue | white | `var(--fountain-dialogue)` |
+| Parenthetical | gray | `var(--fountain-parenthetical)` |
+| Transition | purple | `var(--fountain-transition)` |
+| Shot | orange | `var(--fountain-shot)` |
+| Note | muted | `var(--text-muted)` |
+
+### Slide-Over Panel
+
+```css
+.slide-panel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--bg-primary);
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    z-index: 5;
+}
+
+.slide-panel.open {
+    transform: translateX(0);
+}
+
+.slide-panel-header {
+    padding: 16px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: 24px;
+    width: 44px;
+    height: 44px;
+}
+```
+
+### Scene List Item (Mobile)
+
+```css
+.scene-list-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    border-left: 3px solid transparent;
+}
+
+.scene-list-item.active {
+    background: var(--accent-light);
+    border-left-color: var(--accent);
+}
+
+.scene-icon {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+}
+
+.scene-icon.int { color: var(--fountain-scene); }
+.scene-icon.ext { color: var(--success); }
+```
+
+### Mobile Cards
+
+```css
+.card {
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.card-title {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.card-subtitle {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+```
+
+### Shot Card (Mobile)
+
+```css
+.shot-card {
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+    display: flex;
+    gap: 12px;
+}
+
+.shot-number {
+    width: 32px;
+    height: 32px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.shot-info { flex: 1; }
+.shot-type { font-weight: 600; font-size: 14px; }
+.shot-desc { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+```
+
+### Stats Grid (Mobile)
+
+```css
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.stat-card {
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--accent);
+}
+
+.stat-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+```
+
+### Character Item (Mobile)
+
+```css
+.character-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+    margin-bottom: 4px;
+}
+
+.character-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.character-name { flex: 1; font-size: 14px; }
+.character-count { font-size: 12px; color: var(--text-muted); }
+```
+
+### Home Indicator (iOS)
+
+```css
+.home-indicator {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 3px;
+    z-index: 10;
+}
+```
+
+---
+
+## Responsive Breakpoints
+
+### Desktop: ≥ 1024px (Primary)
+
+Full three-panel layout as shown in mockup.html.
+
+### Tablet: 768px - 1023px
+
+Same three-panel layout with narrower sidebars:
+
+```css
+.editor-container {
+    grid-template-columns: 200px 1fr 180px;
+}
+```
+
+### Mobile: < 768px
+
+Single-column layout as shown in mockup-mobile.html. See Mobile Components section.
+
+---
+
+## Fountain Format Styling
 
 ```css
 /* Scene Heading */
@@ -539,54 +1739,62 @@ Action text includes a subtle column guide at 60ch:
 
 ## Screen Architecture
 
-### Desktop Screens
+### Desktop Screens (4 Total)
 
-| # | Screen | Description |
-|---|--------|-------------|
-| 1 | **Script Editor** | Primary workspace. Three-column layout with scene navigator, editor, and character panel |
-| 2 | **Shot List** | Table view per scene with shot type, angle, movement, duration |
-| 3 | **Storyboards** | Filmstrip + panel detail view with edit/regenerate actions |
-| 4 | **Script Breakdown** | Four-column stats + scene/character/location cards |
+| # | Screen | Description | Layout |
+|---|--------|-------------|--------|
+| 1 | **Script Editor** | Primary workspace | Three-panel grid with scene navigator, editor, character panel |
+| 2 | **Shot List** | Shot planning per scene | Section header + full-width table + confirm button |
+| 3 | **Storyboards** | Visual panel review | Filmstrip carousel + 2-column detail/settings grid |
+| 4 | **Script Breakdown** | Script analysis | 4 stat cards + 3-column scene/character/location cards |
 
-### Mobile Screens (12 total)
+### Mobile Screens (12 Total)
 
-| # | Screen | Key Features |
-|---|--------|--------------|
-| 1 | **Main Script Editor** | Format bar, FAB, scene nav, bottom nav |
-| 2 | **Focus Mode** | Distraction-free, minimal chrome |
-| 3 | **Scene Navigator** | Jump buttons, scene quick-jump |
-| 4 | **Shots** | Card-based shots, bottom sheet confirm |
-| 5 | **Shot List** | Card-based shots, bottom sheet confirm |
-| 6 | **AI Suggestions** | Suggestion cards with accept/edit/reject |
-| 7 | **Storyboards** | Filmstrip carousel, panel detail |
-| 8 | **Characters** | Avatar list with dialogue counts |
-| 9 | **Settings** | Toggles, export options, storyboard style |
-| 10 | **Scene Cards** | Alternative view mode, card-based scenes |
-| 11 | **Notes** | Comments, versions, note input |
-| 12 | **Project List** | Landing, recent projects, new/import |
+| # | Screen | Key Features | Touch Targets |
+|---|--------|--------------|---------------|
+| 1 | **Main Script Editor** | Format bar, FAB, scene nav, bottom nav | All ≥44px |
+| 2 | **Focus Mode** | Distraction-free, minimal chrome | Scene nav, exit button |
+| 3 | **Scene Navigator** | Jump buttons, scene quick-jump chips | Scene chips ≥32px |
+| 4 | **Breakdown** | Tabbed view, stats grid, scene list | Tabs, cards |
+| 5 | **Shot List** | Card-based shots, bottom sheet confirm | Shot cards, confirm |
+| 6 | **AI Suggestions** | Suggestion cards with accept/edit/reject | Buttons ≥44px |
+| 7 | **Storyboards** | Filmstrip carousel, panel detail | Thumbnails 70px |
+| 8 | **Characters** | Avatar list with dialogue counts | Character items |
+| 9 | **Settings** | Toggles, export options, storyboard style | Toggle switches |
+| 10 | **Scene Cards** | Alternative view mode, card-based scenes | Scene cards |
+| 11 | **Notes** | Comments, versions, note input | Text input, button |
+| 12 | **Project List** | Landing, recent projects, new/import | Project cards |
 
 ### Navigation Flow
 
 ```
-Desktop:                    Mobile:
-┌─────────────┐            ┌─────────────┐
-│   Header    │            │   Header    │
-└──────┬──────┘            └──────┬──────┘
-       │                          │
-       ▼                          ▼
-┌─────────────────┐      ┌─────────────────┐
-│  Script Editor  │      │  Script Editor  │
-│  (Primary)      │      │  (Primary)      │
-└─────────────────┘      └────────┬────────┘
-         │                         │
-         ▼                         ▼
-┌─────────────────┐      ┌─────────────────┐
-│  Top Nav Tabs   │      │  Bottom Nav Bar │
-│  - Script       │      │  - Script       │
-│  - Shots        │      │  - Shots        │
-│  - Storyboards  │      │  - Storyboards  │
-│  - Breakdown    │      │  - Breakdown    │
-└─────────────────┘      └─────────────────┘
+Desktop Navigation:                     Mobile Navigation:
+┌─────────────────────┐                ┌─────────────────────┐
+│       HEADER        │                │    MOBILE TOP BAR   │
+│  Logo + Nav Tabs    │                │  [☰] Title [Actions]│
+└──────────┬──────────┘                └──────────┬──────────┘
+           │                                      │
+           ▼                                      ▼
+┌─────────────────────┐                ┌─────────────────────┐
+│   SCRIPT EDITOR     │                │   SCRIPT EDITOR     │
+│     (Primary)       │                │     (Primary)       │
+│                     │                │                     │
+│  Three-panel grid   │                │  Single column +    │
+│  240 | 1fr | 200    │                │  slide-over panels  │
+└──────────┬──────────┘                └──────────┬──────────┘
+           │                                      │
+           ▼                                      ▼
+┌─────────────────────┐                ┌─────────────────────┐
+│    TOP NAV TABS     │                │   BOTTOM NAV BAR    │
+│  [Script][Shots]    │                │  [Script][Shots]    │
+│  [Story][Breakdown] │                │  [Boards][Breakdown]│
+└─────────────────────┘                └─────────────────────┘
+
+Mobile-Specific Navigation Patterns:
+- ☰ Hamburger → Opens slide-over scene panel
+- FAB → Opens quick format overlay (4×2 grid)
+- Scene chips → Quick jump between scenes
+- Swipe gestures → Navigate between panels (future)
 ```
 
 ---
@@ -808,7 +2016,7 @@ The script editor uses `contenteditable="true"` with `spellcheck="false"` for Fo
 
 ---
 
-## Implementation Status (2026-03-30)
+## Implementation Status (2026-04-01)
 
 ### Current State vs Design Spec
 
@@ -825,8 +2033,9 @@ The current implementation diverges significantly from this design specification
 | **Right Panel** | Characters + Scene Info + Actions | "Details" header only | ❌ 10% |
 | **Format Bar** | Styled buttons with shortcuts | Disabled buttons, no styling | ⚠️ 40% |
 | **Fountain Styling** | Color-coded elements | Not implemented | ❌ 0% |
+| **Mobile Layout** | 12 screens with bottom nav | Not implemented | ❌ 0% |
 
-**Overall Compliance: ~20%**
+**Overall Compliance: ~15%**
 
 ### Critical Missing Elements
 
@@ -859,22 +2068,32 @@ The current implementation diverges significantly from this design specification
 - **Missing**: Line numbers (optional feature)
 
 #### 6. Format Bar
-- **Missing**: Styled format buttons
-- **Missing**: Color-coded button states
-- **Missing**: Keyboard shortcut hints
+- **Missing**: Styled format buttons with color-coded dots
+- **Missing**: Active states with accent background
+- **Missing**: Keyboard shortcut hints (Cmd/Ctrl variants)
 - **Missing**: Platform detection (Mac vs Win)
+
+#### 7. Mobile Components
+- **Missing**: Bottom navigation bar
+- **Missing**: Floating Action Button (FAB)
+- **Missing**: Slide-over scene panel
+- **Missing**: Quick format overlay (4×2 grid)
+- **Missing**: Touch-optimized components (44px minimum)
 
 ### Remediation Priority
 
-| Priority | Task | Effort | Impact |
-|----------|------|--------|--------|
-| P0 | Implement three-panel grid layout | Medium | Critical |
-| P0 | Create Header component with nav tabs | Medium | High |
-| P1 | Style scene navigator with icons | Medium | High |
-| P1 | Add fountain syntax highlighting | High | Critical |
-| P2 | Implement character panel | Medium | Medium |
-| P2 | Style format bar | Low | Medium |
-| P3 | Add responsive breakpoints | Medium | Low |
+| Priority | Task | Effort | Impact | Dependency |
+|----------|------|--------|--------|------------|
+| P0 | Implement three-panel grid layout | Medium | Critical | None |
+| P0 | Create Header component with nav tabs | Medium | High | None |
+| P0 | Create mobile bottom navigation | Low | Critical | None |
+| P1 | Style scene navigator with INT/EXT icons | Medium | High | P0 layout |
+| P1 | Add fountain syntax highlighting | High | Critical | P0 layout |
+| P1 | Implement FAB + quick format overlay | Medium | High | P0 mobile |
+| P1 | Create slide-over scene panel | Medium | High | P0 mobile |
+| P2 | Implement character panel | Medium | Medium | P0 layout |
+| P2 | Style format bar with color dots | Low | Medium | P0 layout |
+| P3 | Add responsive breakpoints | Medium | Low | P0-P2 |
 
 ### Design Tokens Not Yet Applied
 
@@ -882,13 +2101,13 @@ The following design tokens from this spec are defined but not applied in code:
 
 ```css
 /* Missing from implementation */
---fountain-scene: #fbbf24
---fountain-character: #60a5fa
---fountain-dialogue: #f5f5f5
---fountain-parenthetical: #9ca3af
---fountain-action: #f5f5f5
---fountain-transition: #c084fc
---fountain-shot: #fb923c
+--fountain-scene: #fbbf24      /* Scene headings - amber */
+--fountain-character: #60a5fa  /* Character names - blue */
+--fountain-dialogue: #f5f5f5   /* Dialogue text - white */
+--fountain-parenthetical: #9ca3af /* Parentheticals - gray */
+--fountain-action: #f5f5f5     /* Action/description - white */
+--fountain-transition: #c084fc /* Transitions - purple */
+--fountain-shot: #fb923c       /* Shot headings - orange */
 ```
 
 ### Component Architecture Update
@@ -904,6 +2123,12 @@ src/
 │   │   ├── LeftSidebar.tsx     # UPDATE - Scene navigator
 │   │   ├── RightPanel.tsx      # UPDATE - Character panel
 │   │   └── SceneWorkspace.tsx  # UPDATE - Three-panel layout
+│   ├── mobile/
+│   │   ├── BottomNav.tsx       # NEW - Mobile bottom nav
+│   │   ├── MobileTopBar.tsx    # NEW - Mobile header
+│   │   ├── MobileFormatBar.tsx # NEW - Scrollable format bar
+│   │   ├── SceneSlidePanel.tsx # NEW - Slide-over scene list
+│   │   └── QuickFormatOverlay.tsx # NEW - FAB-triggered overlay
 │   └── script/
 │       ├── ScriptEditor.tsx    # UPDATE - Script page styling
 │       └── FountainHighlight.tsx # UPDATE - Element styling
@@ -913,7 +2138,7 @@ src/
 
 ### Visual Comparison Reference
 
-See `mockup.html` for the target design. Key visual differences:
+See `mockup.html` for desktop design and `mockup-mobile.html` for mobile design. Key visual differences:
 
 1. **Mockup**: Three distinct panels with clear separation
    **Current**: Single panel, no visual hierarchy
@@ -927,12 +2152,15 @@ See `mockup.html` for the target design. Key visual differences:
 4. **Mockup**: Dark backgrounds with high contrast text
    **Current**: Default styling, low contrast
 
+5. **Mockup**: Mobile has 12 distinct screens with bottom nav
+   **Current**: No mobile-specific layout
+
 ### Next Steps
 
-1. Review `specs/ui-layout-refactor.md` for detailed implementation plan
-2. Start with P0 items (layout and header)
-3. Apply design tokens via CSS custom properties
-4. Validate against mockup.html visually
+1. Start with P0 items (desktop layout, header, mobile bottom nav)
+2. Apply design tokens via CSS custom properties
+3. Validate against mockup.html and mockup-mobile.html visually
+4. Use `specs/mobile-responsiveness.md` for mobile implementation details
 
 ---
 
@@ -942,3 +2170,4 @@ See `mockup.html` for the target design. Key visual differences:
 |---------|------|---------|
 | 1.0 | 2024-03-28 | Initial design system based on mockups |
 | 1.1 | 2026-03-30 | Added implementation status section and gap analysis |
+| 1.2 | 2026-04-01 | Added comprehensive ASCII wireframes for desktop (4 screens) and mobile (12 screens), detailed component specs, mobile components section, responsive breakpoints, navigation flow diagrams |

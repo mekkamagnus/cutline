@@ -4,6 +4,9 @@
  * Re-exports all TanStack Query hooks for use throughout the application.
  */
 
+// Utility hooks
+export { useBreakpoint, type BreakpointState } from './use-breakpoint';
+
 // Project hooks
 export {
   useProjects,

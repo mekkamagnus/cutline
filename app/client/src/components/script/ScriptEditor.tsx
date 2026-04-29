@@ -238,8 +238,6 @@ SARAH enters, looking rushed."
 const editorContainerStyles: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  height: '100%',
-  overflowY: 'auto',
   padding: 'var(--space-6)',
   background: 'var(--bg-primary)',
 };

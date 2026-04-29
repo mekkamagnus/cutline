@@ -10,6 +10,7 @@ import '@fontsource/inter/600.css';
 import '@fontsource/courier-prime/400.css';
 import '@fontsource/courier-prime/700.css';
 import './styles/tokens.css';
+import './styles/mobile.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
