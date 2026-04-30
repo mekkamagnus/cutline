@@ -53,8 +53,38 @@ jobs:
             cd ../server
             bun install
 
+            # Configure nginx for SPA + PWA
+            sudo tee /etc/nginx/sites-available/cutline > /dev/null <<'NGINX'
+            server {
+                listen 80;
+                server_name cutline.mekaelturner.com;
+
+                root /opt/cutline/app/client/dist;
+                index index.html;
+
+                # Service worker must never be cached
+                location = /sw.js {
+                    add_header Cache-Control "no-cache, no-store, must-revalidate";
+                    add_header Pragma "no-cache";
+                    add_header Expires "0";
+                    types { application/javascript js; }
+                }
+
+                # Static assets with content hash can be cached aggressively
+                location /assets/ {
+                    expires 1y;
+                    add_header Cache-Control "public, immutable";
+                }
+
+                # All other routes serve index.html (SPA)
+                location / {
+                    try_files $uri $uri/ /index.html;
+                }
+            }
+            NGINX
+
+            sudo ln -sf /etc/nginx/sites-available/cutline /etc/nginx/sites-enabled/cutline
+            sudo nginx -t && sudo systemctl reload nginx
+
             # Restart PM2 process
             pm2 restart cutline-api || PORT=3600 pm2 start src/index.ts --name cutline-api
-
-            # Reload NGINX
-            sudo systemctl reload nginx
