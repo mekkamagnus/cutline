@@ -41,17 +41,21 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            set -e
+
             cd /opt/cutline
-            git pull origin main
+            sudo git config --global --add safe.directory /opt/cutline
+            sudo git pull origin main
+            sudo git reset --hard origin/main
 
             # Install and build frontend
             cd app/client
-            npm ci
-            npm run build
+            sudo npm ci
+            sudo npm run build
 
             # Install backend dependencies
             cd ../server
-            bun install
+            sudo bun install
 
             # Configure nginx for SPA + PWA
             sudo tee /etc/nginx/sites-available/cutline > /dev/null <<'NGINX'
@@ -87,4 +91,4 @@ jobs:
             sudo nginx -t && sudo systemctl reload nginx
 
             # Restart PM2 process
-            pm2 restart cutline-api || PORT=3600 pm2 start src/index.ts --name cutline-api
+            sudo pm2 restart cutline-api || sudo PORT=3600 pm2 start src/index.ts --name cutline-api
