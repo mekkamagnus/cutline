@@ -45,7 +45,7 @@ jobs:
 
             cd /opt/cutline
             sudo git config --global --add safe.directory /opt/cutline
-            sudo git pull origin main
+            sudo git fetch origin main
             sudo git reset --hard origin/main
 
             # Install and build frontend
