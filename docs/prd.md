@@ -74,6 +74,60 @@ Video Generation (via API)
 - Save indicator for unsaved changes
 - Responsive design: editing works on desktop, tablet, and mobile
 
+#### 1.5.1 Hollywood Standard Formatting
+
+**Reference**: See `docs/hollywood-standard.md` for the full specification.
+
+**User Story**: As a filmmaker, I want my script to render in industry-standard screenplay format so that it looks professional and matches what I'd see in Final Draft or Fade In.
+
+**Acceptance Criteria**:
+
+- **Typography**: Courier or Courier Prime font, 12pt equivalent, monospaced
+- **Element dimensions** match Hollywood Standard (measured in `ch` units for 10-pitch Courier):
+
+  | Element | Max Width | Alignment | CSS Variable |
+  |---|---|---|---|
+  | Scene Heading | 60ch (6.0") | Left, uppercase, bold | — |
+  | Action | 60ch (6.0") | Left | `--script-action-width` |
+  | Character Cue | 20ch (2.0") | Centered, uppercase | `--script-character-width` |
+  | Dialogue | 35ch (3.5") | Centered | `--script-dialogue-width` |
+  | Parenthetical | 20ch (2.0") | Centered, italic | `--script-parenthetical-width` |
+  | Transition | 60ch (6.0") | Right, uppercase | — |
+  | Shot | 60ch (6.0") | Left, uppercase | — |
+
+- **Centered elements** (character cues, dialogue, parentheticals) use `margin: auto` with `max-width` constraint — leading whitespace is stripped from the syntax overlay so CSS centering is not affected by Fountain indentation
+- **Spacing**: 1 blank line between distinct elements; no blank line between character cue and its dialogue/parenthetical
+- **Color-coded syntax highlighting** per element type (scene headings, characters, dialogue, parentheticals, action, transitions, shots)
+- **Textarea overlay pattern**: transparent textarea for input + absolute-positioned overlay for rendering; cursor alignment maintained between layers
+- **Responsive**: element widths scale proportionally on tablet and mobile viewports
+
+**User Story**: As a filmmaker, I want syntax highlighting to distinguish script elements at a glance so that I can quickly scan and navigate my screenplay.
+
+**Acceptance Criteria**:
+
+- Each element type has a distinct color from the design token palette:
+  - Scene headings: `--fountain-scene` (gold)
+  - Character cues: `--fountain-character` (blue)
+  - Dialogue: `--fountain-dialogue` (primary text)
+  - Parentheticals: `--fountain-parenthetical` (muted gray, italic)
+  - Action: `--fountain-action` (primary text)
+  - Transitions: `--fountain-transition` (purple)
+  - Shots: `--fountain-shot` (orange)
+- Highlighting updates in real-time as the user types
+- Non-highlighted text (unknown element type) renders as action style by default
+
+#### 1.5.2 Page Delineation & Navigation
+
+**User Story**: As a filmmaker, I want to see where each screenplay page begins and ends so that I know my script's page count and can reference specific pages during production.
+
+**Acceptance Criteria**:
+- Dashed horizontal divider lines appear every 55 lines (standard screenplay page boundary)
+- Line numbers restart at 1 at each page boundary (per-page numbering)
+- Page dividers are subtle (dashed, low opacity) and do not interfere with editing
+- Infinite-scroll layout: all pages visible in a single continuous scroll — no nested scrollbars
+- Page count displayed in the status bar (derived from total lines / 55)
+- Dividers render in both the line number gutter and the syntax overlay for visual alignment
+
 ### 1.6. Script Breakdown & Analysis
 
 **User Story**: As a filmmaker, I want to see my script automatically broken down into its constituent elements so that I can understand and organize the production requirements.
