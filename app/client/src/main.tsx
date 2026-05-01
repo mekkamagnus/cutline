@@ -11,6 +11,9 @@ import '@fontsource/courier-prime/400.css';
 import '@fontsource/courier-prime/700.css';
 import './styles/tokens.css';
 import './styles/mobile.css';
+import './styles/shot-list.css';
+import './styles/fountain.css';
+import './styles/storyboard.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

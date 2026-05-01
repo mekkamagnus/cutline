@@ -3,12 +3,13 @@ import { Routes, Route, Navigate, useParams, useLocation, useNavigate } from 're
 import { SceneWorkspace, Header, FormatBar, LeftSidebar, RightPanel, BottomNav, MobileTopBar, MobileFormatBar, SceneSlidePanel } from '@/components/workspace';
 import { ScriptEditor } from '@/components/script';
 import { ShotListEditor } from '@/components/shot-list';
-import { StoryboardStrip } from '@/components/storyboard';
+import { StoryboardScreen } from '@/components/storyboard';
 import { useBreakpoint } from '@/hooks';
 import { useUIStore } from '@/stores';
 import { fountainParser } from '@/services/fountain-parser';
+import { generateShotsFromScene } from '@/services/shot-generator';
 import { Result } from '@/lib/fp';
-import type { Scene } from '@/types';
+import type { Scene, Shot } from '@/types';
 import type { MobileView } from '@/components/workspace';
 
 function App() {
@@ -100,6 +101,7 @@ function ProjectWorkspace() {
   const navigate = useNavigate();
   const viewMode = deriveViewMode(location.pathname, projectId ?? '');
   const [selectedShotId, setSelectedShotId] = useState<string | null>(null);
+  const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
   const [content, setContent] = useState(`INT. COFFEE SHOP - DAY
 
 A cozy corner coffee shop. Rain patters against the window.
@@ -128,7 +130,106 @@ She looks anxious, checking her watch.
 
                     JANE
               (relieved)
-              Finally.`);
+              Finally.
+
+INT. CITY STREET - CONTINUOUS
+
+Rain hammers the pavement. Jane rushes out of the coffee shop, pulling her coat tight.
+
+MARK runs after her, nearly colliding with a passerby.
+
+                    MARK
+              (calling out)
+              Jane, wait!
+
+JANE stops but doesn't turn around. Cars hiss through puddles.
+
+                    JANE
+              (quietly)
+              I can't do this anymore, Mark.
+
+                    MARK
+              (breathless)
+              Do what? I just got here.
+
+                    JANE
+              (turning to face him)
+              Exactly. You just got here. Two hours late.
+
+EXT. PARK BENCH - NIGHT
+
+The rain has stopped. A single streetlight casts a warm glow.
+
+JANE sits on the wet bench, arms wrapped around herself. MARK approaches cautiously and sits beside her. A long silence.
+
+                    MARK
+              (gently)
+              I'm sorry. I really am.
+
+                    JANE
+              (staring ahead)
+              Sorry doesn't fix it.
+
+                    MARK
+              (reaching into his coat)
+              I brought something. Something I should have given you a long time ago.
+
+He pulls out a worn envelope. Jane stares at it.
+
+                    JANE
+              (whispering)
+              Is that...?
+
+INT. TRAIN STATION - NIGHT
+
+A nearly empty platform. Fluorescent lights buzz overhead. A departures board flickers.
+
+JANE paces near the edge of the platform. MARK sits on a bench, watching her.
+
+                    MARK
+              The last train leaves in ten minutes.
+
+                    JANE
+              (checking her phone)
+              I know.
+
+                    MARK
+              Are you going to take it?
+
+                    JANE
+              (meeting his eyes)
+              I don't know yet.
+
+A TRAIN CONDUCTOR walks past, checking his watch.
+
+                    CONDUCTOR
+              Last call for the midnight express. All aboard.
+
+JANE looks at the train. Looks at Mark. The train doors open with a hiss.
+
+EXT. TRAIN STATION ENTRANCE - DAWN
+
+First light breaks over the city. The station is quiet now. A discarded coffee cup rolls across the empty platform.
+
+JANE stands outside, a ticket in her hand. MARK emerges from the station entrance, his coat over his arm.
+
+They face each other. Neither speaks for a long moment.
+
+                    MARK
+              (simply)
+              You stayed.
+
+                    JANE
+              (small smile)
+              Yeah. I stayed.
+
+                    MARK
+              (offering his hand)
+              Let's start over. Properly this time.
+
+JANE looks at his hand. Takes it. They walk together toward the sunrise.
+
+CUT TO BLACK.`);
   const [isDirty, setIsDirty] = useState(false);
   const { isMobile } = useBreakpoint();
 
@@ -147,6 +248,19 @@ She looks anxious, checking her watch.
       updatedAt: new Date(),
     }));
   }, [content, projectId]);
+
+  const allGeneratedShots = useMemo<Shot[]>(() => {
+    const result = fountainParser.parse(content);
+    if (!Result.isOk(result) || result.right.scenes.length === 0) return [];
+    return result.right.scenes.flatMap((scene) => generateShotsFromScene(scene));
+  }, [content]);
+
+  const currentSceneId = selectedSceneId ?? parsedScenes[0]?.id ?? null;
+
+  const generatedShots = useMemo<Shot[]>(() => {
+    if (!currentSceneId) return allGeneratedShots;
+    return allGeneratedShots.filter((s) => s.sceneId === currentSceneId);
+  }, [allGeneratedShots, currentSceneId]);
 
   const handleSave = (newContent: string) => {
     setContent(newContent);
@@ -175,18 +289,17 @@ She looks anxious, checking her watch.
       case 'shots':
         return (
           <ShotListEditor
-            sceneId="demo-scene"
+            sceneId={currentSceneId ?? 'demo-scene'}
             selectedShotId={selectedShotId ?? undefined}
             onShotSelect={(shot) => setSelectedShotId(shot.id)}
+            initialShots={generatedShots}
           />
         );
       case 'storyboards':
         return (
-          <StoryboardStrip
-            storyboards={[]}
-            shots={[]}
-            selectedPanelId={null}
-            onPanelSelect={() => {}}
+          <StoryboardScreen
+            sceneId={currentSceneId ?? 'demo-scene'}
+            initialShots={generatedShots}
           />
         );
       case 'breakdown':
@@ -218,10 +331,10 @@ She looks anxious, checking her watch.
           {/* Left Sidebar */}
           <LeftSidebar
             projectId={projectId}
-            currentSceneId={null}
+            currentSceneId={currentSceneId}
             scenes={parsedScenes}
             onSceneSelect={(id) => {
-              window.location.href = `/project/${projectId}/scene/${id}`;
+              setSelectedSceneId(id);
             }}
           />
 
@@ -268,16 +381,15 @@ She looks anxious, checking her watch.
                   sceneId="demo-scene"
                   selectedShotId={selectedShotId ?? undefined}
                   onShotSelect={(shot) => setSelectedShotId(shot.id)}
+                  initialShots={generatedShots}
                 />
               </div>
             )}
             {viewMode === 'storyboards' && (
               <div style={{ padding: 'var(--space-4)' }}>
-                <StoryboardStrip
-                  storyboards={[]}
-                  shots={[]}
-                  selectedPanelId={null}
-                  onPanelSelect={() => {}}
+                <StoryboardScreen
+                  sceneId={currentSceneId ?? 'demo-scene'}
+                  initialShots={generatedShots}
                 />
               </div>
             )}

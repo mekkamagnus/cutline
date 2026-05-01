@@ -28,8 +28,9 @@ export function LeftSidebar({
   scenes: scenesProp,
   scriptStats,
 }: LeftSidebarProps) {
-  const { data: fetchedScenes = [], isLoading } = useScenes(projectId);
+  const { data: fetchedScenes = [], isLoading: hookLoading } = useScenes(projectId);
   const scenes = scenesProp ?? fetchedScenes;
+  const isLoading = scenesProp ? false : hookLoading;
 
   // Calculate stats from scenes if not provided
   const stats = scriptStats || {
