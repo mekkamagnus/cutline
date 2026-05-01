@@ -49,6 +49,21 @@ Component → Store   → Adapter → Dexie    (CRUD operations)
 
 Services handle business rules (confirmation paradigm, validation). Stores handle UI state and simple CRUD. Adapters transform between domain types and DB types (Date ↔ ISO string).
 
+### 1.4 Client-Side Routing
+
+React Router v6 with URL-driven tab navigation. Each tab maps to a route:
+
+| Route | View | Component |
+|---|---|---|
+| `/project/:projectId/script` | Script editor | `ScriptEditor` |
+| `/project/:projectId/shots` | Shot list | `ShotListEditor` |
+| `/project/:projectId/storyboards` | Storyboards | `StoryboardScreen` |
+| `/project/:projectId/breakdown` | Breakdown | Placeholder |
+
+`ProjectWorkspace` derives the active view from `useLocation().pathname`. Tab buttons call `navigate()` to update the URL. `deriveViewMode()` reads the URL path to determine which view to render.
+
+Scene selection state lives in App component (not in the URL). Deep-linking to a specific scene is not supported yet.
+
 ---
 
 ## 2. Data Models
@@ -344,11 +359,98 @@ Director edits shot list → clicks "Confirm Shot List"
 
 Unlock returns shots to `confirmed: false`.
 
-### 5.4 Shot List Editor UI
+### 5.4 Shot List Editor UI — Implementation
 
-Per-scene tabular interface. Each row: shot number, type dropdown, angle dropdown, movement dropdown, characters multiselect, action description input, duration input, notes input, delete button.
+Per-scene tabular interface using a div-based grid (not HTML `<table>`). Components:
+
+- **`ShotListEditor`**: Orchestrator. Receives `initialShots` prop for auto-seeding. Manages editing state. Uses `displayShots` (hook data or `initialShots` fallback) for all rendering.
+- **`ShotRow`**: Renders a shot as a grid row (`<div>` elements with `shot-list-editor__row` / `shot-list-editor__cell` classes). Imports `ShotForm` for inline editing.
+- **`ShotForm`**: Inline form for add/edit. `onSave` accepts `ShotData` (not `Partial<ShotData>`). `shotNumber` and `isCreating` props for context.
+- **`ShotListStatus`**: Presentational. Accepts `shotCount`, `isConfirmed`, `confirmedAt` as props — no internal hooks.
+- **`ConfirmationButton`**: Presentational. Accepts `shotCount`, `isConfirmed`, `onConfirm`, `onUnlock`, `isConfirming`, `isUnlocking` — no internal state or modal.
+
+**Auto-seed pattern**: `ShotListEditor` uses a `hasSeeded` ref to prevent double-seeding. When `useShots(sceneId)` returns empty and `initialShots` are provided, each shot is persisted via `createShot.mutateAsync({ sceneId, data })`. This bridges the gap between generated in-memory shots and the IndexedDB-backed confirmation workflow.
+
+**Styles**: `shot-list.css` defines all BEM classes using design tokens. Column widths: `#` (40px), Type (100px), Angle (100px), Movement (100px), Characters (120px), Action (1fr), Duration (70px), Actions (auto).
 
 Keyboard: Tab advances fields, Enter adds new shot, Escape cancels edit.
+
+---
+
+## 5.5. Storyboard Screen Specification
+
+### 5.5.1 Architecture
+
+`StoryboardScreen` orchestrates the storyboard view for a single scene. It does not use the existing `StoryboardStrip` or `StoryboardPanel` components — it renders its own card grid layout.
+
+**Data flow**:
+```
+StoryboardScreen
+  ├── useShots(sceneId) → shots from IndexedDB
+  ├── useShotListConfirmationStatus(sceneId) → isConfirmed
+  ├── useStoryboardsForShots(shotIds) → Map<shotId, StoryboardPanel>
+  ├── .storyboard-grid → array of .storyboard-card elements
+  ├── StoryboardGenerator (shown when not all panels generated)
+  └── RefinementPanel (shown when card selected)
+```
+
+### 5.5.2 Batch Storyboard Query Hook
+
+`useStoryboardsForShots(shotIds: string[])` — single `useQuery` hook that fetches all storyboards for an array of shot IDs in one IndexedDB query using `repo.findByShotIds(shotIds)`. Returns `Map<string, StoryboardPanel>`.
+
+**Why not per-shot hooks**: The initial implementation called `useStoryboardForShot(shotId)` inside a `.map()` over `displayShots`. This violated React's Rules of Hooks — when shot count changed between renders, hook call count changed, causing 9 console errors and a blank screen. The batch hook calls `useQuery` exactly once regardless of shot count.
+
+### 5.5.3 Card Grid Layout
+
+```
+.storyboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 280px);
+  grid-auto-rows: max-content;
+  align-items: start;
+  align-content: start;
+  gap: var(--space-4);
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+```
+
+- **Fixed 280px columns**: Cards never resize. Only column count changes with viewport (4 cols @ 1920px, 3 @ 1512px, 2 @ 1280px, 1 @ 800px).
+- **`grid-auto-rows: max-content`**: Each row sizes to its card's natural height. Without this, CSS Grid compressed rows to ~70px, and `overflow: hidden` on cards clipped all content.
+- **`align-items: start` + `align-content: start`**: Prevents grid from stretching cards vertically. Rows pack at the top; grid scrolls via `overflow-y: auto`.
+- **`.storyboard-card { height: max-content }`**: Ensures cards report full content height for correct row measurement.
+
+### 5.5.4 Card Structure
+
+Each `.storyboard-card` contains:
+
+1. **Image area**: `.storyboard-card__image-area` (16:9 aspect ratio)
+   - Generated: `<img>` with storyboard image
+   - Placeholder: `.storyboard-card__placeholder` showing "Shot N / Generate"
+
+2. **Annotations**: `.storyboard-card__annotations`
+   - Header row (3-col grid): Scene | Frame | Time
+   - Description row (full-width): action description
+   - Script row (full-width): type / angle / movement — characters
+   - Footer row (2-col grid): Sound | Music
+
+### 5.5.5 Paradigm Gate States
+
+| Condition | Rendered |
+|---|---|
+| No shots | Empty state: "Go to the Shots tab to create your shot list first." |
+| Shots not confirmed | Warning: "Confirm Your Shot List" with explanation |
+| Shots confirmed, panels missing | Card grid with placeholders + StoryboardGenerator |
+| All panels generated | Card grid only (no generator) |
+
+### 5.5.6 Refinement Panel
+
+- Desktop: slides in from right (400px width, `slideInRight` animation)
+- Mobile: slides up from bottom (100% width, `slideUpMobile` animation)
+- Contains: image preview, prompt textarea, style selector, generate button, cost display
+- Escape key closes panel
+- `onRefined` callback updates local `storyboardMap` state optimistically
 
 ---
 

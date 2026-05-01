@@ -57,22 +57,27 @@ Video Generation (via API)
 - Display parsed structure in organized, navigable format
 - Handle common Fountain format variations
 
-### 1.5. Script Editor
+### 1.5. Script Editor — ✅ Implemented
 
 **User Story**: As a filmmaker, I want to write and edit scripts directly in the application so that I can work on my screenplay without switching tools.
 
 **Acceptance Criteria**:
-- In-app Fountain format script editor with syntax highlighting
-- Auto-formatting as you type (sluglines, character names, dialogue)
-- Fountain format autocomplete
-- Scene heading detection and formatting
-- Character name caching and autocomplete
-- Standard screenplay formatting (Courier font, proper margins/spacing)
-- **AV Format Support**: Two-column script format (Video | Audio columns)
-- Keyboard shortcuts for common script elements (Tab for character, Enter for dialogue, etc.)
-- Word count and page count estimation
-- Save indicator for unsaved changes
-- Responsive design: editing works on desktop, tablet, and mobile
+- ✅ In-app Fountain format script editor with syntax highlighting
+- ✅ Hollywood Standard formatting (element widths, colors, spacing)
+- ✅ Textarea overlay pattern: transparent textarea + syntax overlay for rendering
+- ✅ Page delineation every 55 lines with per-page line numbers
+- ✅ Infinite-scroll layout (no nested scrollbars, auto-resizing textarea)
+- ✅ Color-coded syntax highlighting per element type
+- ✅ Standard screenplay formatting (Courier font, proper margins/spacing)
+- ✅ Responsive design: editing works on desktop, tablet, and mobile
+- ✅ Word count and page count estimation in stats
+- ❌ Auto-formatting as you type (deferred — manual Fountain format)
+- ❌ Fountain format autocomplete (deferred)
+- ❌ Scene heading detection and auto-formatting (deferred)
+- ❌ Character name caching and autocomplete (deferred)
+- ❌ **AV Format Support**: Two-column script format (deferred)
+- ❌ Keyboard shortcuts for common script elements (deferred)
+- ❌ Save indicator for unsaved changes (deferred)
 
 #### 1.5.1 Hollywood Standard Formatting
 
@@ -150,13 +155,13 @@ Video Generation (via API)
 - Scene metadata editing: add notes, tags, and production status to each scene
 - **Integration with Shot List**: Characters and locations available as dropdowns in shot editor
 
-### 1.7. Shot List Editor
+### 1.7. Shot List Editor — ✅ Implemented
 
 **User Story**: As a filmmaker, I want to define shots for each scene so that the AI knows exactly what storyboards to generate.
 
 **Acceptance Criteria**:
-- Per-scene shot list editor with tabular interface
-- For each shot, define:
+- ✅ Per-scene shot list editor with tabular interface (div-based grid)
+- ✅ For each shot, define:
   - **Shot Number**: Sequential (1, 2, 3...)
   - **Shot Type**: Wide / Medium / Close-up / Extreme CU / Two-shot / Over-the-shoulder / Establishing / Insert
   - **Camera Angle**: Eye level / High angle / Low angle / Dutch angle / Bird's eye / Worm's eye
@@ -165,47 +170,49 @@ Video Generation (via API)
   - **Action Description**: Brief description of what happens in shot
   - **Duration**: Suggested length (seconds)
   - **Notes**: Director's additional notes
-- Keyboard shortcuts: Tab to next field, Enter to add new shot, Ctrl+Z undo
-- Copy/duplicate shot functionality
-- Reorder shots (drag and drop or move up/down buttons)
-- Delete shot with confirmation
-- Shot count display per scene
-- Auto-save shot list changes
+- ✅ Auto-generated shots from parsed scene content (rule-based, not AI)
+- ✅ Add/edit/delete shots with inline form
+- ✅ Shot count display per scene
+- ✅ Summary stats: total duration, estimated cost
+- ✅ Auto-save via TanStack Query mutations to IndexedDB
+- ❌ Keyboard shortcuts: Tab to next field, Enter to add new shot (deferred)
+- ❌ Copy/duplicate shot functionality (deferred)
+- ❌ Reorder shots (move up/down buttons are present but no-op — deferred)
+- ❌ Delete shot with confirmation (deferred)
 
-### 1.8. AI-Assisted Shot Suggestions
+### 1.8. AI-Assisted Shot Suggestions — ✅ Implemented (rule-based)
 
 **User Story**: As a filmmaker, I want the AI to suggest appropriate shots for my scenes so that I have a starting point rather than starting from blank.
 
 **Acceptance Criteria**:
-- AI analyzes scene content and suggests initial shot list
-- Suggestions based on:
-  - **Dialogue scenes**: Suggest establishing wide, two-shot medium, close-ups on speaking characters
-  - **Action scenes**: Suggest dynamic coverage with multiple angles
-  - **Montage sequences**: Suggest quick-cut shots with variety
-  - **Reveal moments**: Suggest specific close-up or insert shots
-- AI provides reasoning: "Suggest close-up on JANE because this is her emotional reaction"
-- Director can:
-  - Accept all suggestions
-  - Accept individual shots
-  - Edit any suggested shot
-  - Delete suggestions and add own shots
-- "Regenerate suggestions" button with different prompt options
-- Suggestions use scene context (characters, location, mood from breakdown)
+- ✅ Deterministic shot generation from parsed scene content
+- ✅ Generation rules (element-type-based, not AI):
+  - First action at scene start → establishing shot (3s) + wide shot for grouped actions
+  - Subsequent action groups → wide or two-shot (if 2+ characters)
+  - Character + dialogue + parenthetical blocks → alternating over-the-shoulder / close-up
+  - Transitions → skipped (implicit cuts)
+  - Duration calculated from word count, capped at 2–10 seconds
+- ✅ 9 unit tests covering all generation rules
+- ✅ Auto-seeded into IndexedDB when DB is empty
+- ❌ AI-powered suggestions with reasoning (deferred — uses heuristic rules)
+- ❌ "Regenerate suggestions" button (deferred)
+- ❌ Accept/reject individual suggestions (deferred)
 
-### 1.9. Shot List Confirmation
+### 1.9. Shot List Confirmation — ✅ Implemented
 
 **User Story**: As a filmmaker, I want to explicitly confirm my shot list before AI generation so that I don't waste credits on unwanted storyboards.
 
 **Acceptance Criteria**:
-- Review mode showing all shots in the scene
-- Summary statistics: shot count, estimated storyboard generation cost
-- "Confirm Shot List" button that:
+- ✅ Summary statistics: shot count, estimated storyboard generation cost
+- ✅ "Confirm Shot List" button that:
   - Locks the shot list (prevents accidental edits)
   - Enables AI storyboard generation for this scene
-  - Shows confirmation with estimated cost
-- "Unlock for Editing" button to make changes after confirmation
-- Visual indicator showing confirmed vs. unconfirmed scenes
-- Bulk confirmation: confirm multiple scenes at once
+  - Shows confirmation dialog with estimated cost
+- ✅ "Unlock for Editing" button to make changes after confirmation
+- ✅ Visual indicator showing confirmed vs. unconfirmed status (📝 Draft / 🔒 Confirmed)
+- ✅ Paradigm gate enforced at service, API, and UI layers
+- ❌ Review mode showing all shots before confirmation (deferred)
+- ❌ Bulk confirmation: confirm multiple scenes at once (deferred)
 
 ### 1.10. Local Collaboration Features
 
@@ -323,43 +330,42 @@ Video Generation (via API)
 - Use Alibaba Cloud DashScope API for Wan2.6
 - Abstraction layer for easy addition of future APIs (DALL-E, etc.)
 
-### 6. AI Storyboard Generation (From Confirmed Shot List)
+### 6. AI Storyboard Generation (From Confirmed Shot List) — ✅ Implemented
 
 **User Story**: As a filmmaker, I want the AI to generate storyboard panels based on my confirmed shot list so that I get visual representations of my planned shots.
 
 **Acceptance Criteria**:
-- **Requires confirmed shot list** (Feature #1.9)
-- For each confirmed shot in shot list, generates ONE storyboard panel
-- Uses shot list fields as generation parameters:
+- ✅ **Requires confirmed shot list** (Feature #1.9) — enforced at service, API, and UI layers
+- ✅ For each confirmed shot in shot list, generates ONE storyboard panel
+- ✅ Uses shot list fields as generation parameters:
   - Shot Type → influences framing and composition
   - Camera Angle → influences perspective in generated image
   - Camera Movement → hints at motion within static image
   - Characters in Frame → ensures correct characters appear
   - Action Description → main prompt content
-- **Visual Style**: Static AI images with sketch/illustrated/manga aesthetic
-  - Style options: Pencil sketch, Ink drawing, Manga/comic, Watercolor storyboard
-  - Style selection at script or scene level
-  - Consistent style within a scene
-- Progress indicator: "Generating storyboard 3 of 12 for Scene 5"
-- Cost tracking: show API cost per panel and running total
-- Batch generation: generate all storyboards for a scene at once
-- Individual regeneration: regenerate specific panels after viewing
-- Fast generation (~2-5 seconds per panel)
+- ✅ **Visual Style**: Static AI images with sketch/illustrated/manga aesthetic
+  - Style options: Pencil Sketch, Ink Drawing, Manga/Comic, Watercolor, Cinematic, Noir, Traditional Storyboard
+  - Style selector in StoryboardGenerator component
+- ✅ Progress indicator during batch generation
+- ✅ Cost tracking: show API cost per panel and running total
+- ✅ Batch generation: generate all storyboards for a scene at once
+- ✅ **Card grid display**: each panel rendered as a 280px fixed-width card with annotations
+- ✅ **Paradigm gate**: warning message when shot list not confirmed; generator hidden until confirmed
+- ✅ Online generation via backend API; offline fallback to placeholder images
+- ❌ Individual regeneration from card (available via refinement panel)
 
-### 7. Storyboard Refinement (Edit Mode)
+### 7. Storyboard Refinement (Edit Mode) — ✅ Implemented
 
 **User Story**: As a filmmaker, I want to selectively edit individual storyboard panels with targeted prompts so that I can refine the AI's rough drafts without starting from scratch.
 
 **Acceptance Criteria**:
-- Each storyboard panel has an "Edit" button
-- Edit mode opens prompt input for that specific panel
-- Director enters refinement prompt:
-  - "Make it a medium shot instead of close-up"
-  - "Show character from behind, looking out window"
-  - "Add dramatic side lighting"
-- AI regenerates that single panel based on prompt
-- Previous version saved (undo/redo capability)
-- Non-destructive editing (can always revert to rough draft)
+- ✅ Click generated card to open refinement panel
+- ✅ RefinementPanel slides in from right (desktop) or bottom sheet (mobile)
+- ✅ Prompt input for targeted refinement
+- ✅ Version history tracking (version number displayed)
+- ✅ Escape key to close panel
+- ✅ Non-destructive editing (previous versions saved)
+- ❌ Undo/redo within refinement session (deferred)
 
 ### 8. Video Generation - Scene Level (Primary)
 
@@ -504,52 +510,40 @@ Video Generation (via API)
 **User Story**: As a filmmaker, I want to focus on one scene at a time so that I can work through my script methodically without being overwhelmed.
 
 **Acceptance Criteria**:
-- Main view displays current scene with its storyboard panels
-- **Left Sidebar**:
-  - Project name and settings
-  - Script overview (scene list with scene headings)
-  - Character list (quick access to character profiles)
-  - Scene navigation (previous/next, jump to scene)
-  - Global settings (script-level config)
-- **Main Content Area**:
-  - Current scene heading (slugline)
-  - Scene-level settings panel (collapsible)
-  - Storyboard panels displayed in sequence
-  - Timeline/filmstrip view of panels
-  - Script text for this scene (action lines, dialogue)
-- **Right Panel** (contextual, collapsible):
-  - When editing storyboard: Edit prompt input, regeneration options
-  - When configuring scene: Scene settings form
-  - When generating video: Generation parameters and progress
-- **Top Navigation**:
-  - Breadcrumb: Project > Scene > Current Panel
-  - View mode toggles: Storyboard view / Script view / Split view
-  - Export / Save / Share buttons
-- Navigation between scenes:
-  - Previous/Next scene buttons
-  - Scene dropdown for quick navigation
-  - Click scene in left sidebar
+- ✅ Main view displays current scene with context-dependent content
+- ✅ **Top Navigation**: 4-tab layout (Script | Shots | Storyboards | Breakdown), URL-driven routing
+- ✅ **Left Sidebar**:
+  - ✅ Scene list with scene headings and INT/EXT indicators
+  - ✅ Character list with dialogue counts
+  - ✅ Script stats (scenes, characters, locations, runtime, word count)
+  - ✅ Quick actions (Edit Scene, Export Scene, Line Numbers)
+  - ❌ Global settings panel (deferred)
+- ✅ **Main Content Area** (tab-dependent):
+  - ✅ Script tab: Fountain editor with syntax highlighting
+  - ✅ Shots tab: Tabular shot list with add/edit/delete
+  - ✅ Storyboards tab: Card grid with generator and refinement
+  - ✅ Breakdown tab: placeholder
+- ✅ **Right Panel** (contextual, collapsible):
+  - ✅ When editing storyboard: RefinementPanel with prompt input
+  - ❌ When configuring scene: Scene settings form (deferred)
+  - ❌ When generating video: Generation parameters (deferred)
+- ✅ Navigation between scenes: click scene in left sidebar
+- ✅ Mobile: stacked layout with bottom nav bar
 
 ### 19. Storyboard Panel Interaction
 
 **User Story**: As a filmmaker, I want to interact with individual storyboard panels naturally so that I can review and refine them efficiently.
 
 **Acceptance Criteria**:
-- Storyboard panels displayed in horizontal scrollable strip (filmstrip style)
-- Click panel to select/focus it
-- Selected panel shows in larger detail view
-- **Panel Actions**:
-  - Edit button (opens edit prompt panel)
-  - Regenerate button (create new version)
-  - Duplicate button (copy panel)
-  - Delete button (remove panel)
-  - Move/reorder buttons (shift left/right)
-- **Panel Detail View**:
-  - Large preview of storyboard image
-  - Associated script text (action lines, dialogue)
-  - Panel metadata (shot type, characters in frame, location)
-  - Version history (if edited multiple times)
-- Keyboard navigation: Arrow keys to move between panels
+- ✅ Storyboard panels displayed in responsive card grid (fixed 280px width, auto-fill columns)
+- ✅ Each card shows: 16:9 image area + annotation rows (Scene, Frame, Time, Description, Script/Camera, Sound, Music)
+- ✅ Click generated card to open refinement panel
+- ✅ Placeholder cards for ungenerated shots show "Shot N / Generate" prompt
+- ✅ Stats bar shows panels generated count and total cost
+- ✅ Paradigm gate: warning shown when shot list not confirmed
+- ❌ Keyboard navigation between panels (deferred)
+- ❌ Drag-and-drop reorder (deferred)
+- ❌ Duplicate/delete from card (deferred — available in refinement panel)
 
 ### 20. Script View Integration
 
@@ -584,93 +578,124 @@ Video Generation (via API)
 - Offline-first with automatic sync
 
 **Core Features**:
-1. **Script Input & Parsing** (Feature #1)
-   - Fountain format upload/paste only (other formats deferred)
+
+1. **Script Input & Parsing** (Feature #1) — ✅ **Implemented**
+   - Fountain format paste (upload deferred)
    - Parse scenes, characters, dialogue, action lines
-   - Display parsed structure
+   - Display parsed structure in left sidebar and stats
 
-2. **Script Editor** (Feature #1.5)
+2. **Script Editor** (Feature #1.5) — ✅ **Implemented**
    - In-app Fountain editor with syntax highlighting
-   - Auto-formatting as you type
-   - AV format support (two-column Video | Audio)
-   - Responsive design: desktop, tablet, mobile editing
+   - Transparent textarea + overlay rendering pattern
+   - Hollywood Standard formatting (element widths, centering, colors)
+   - Page delineation every 55 lines with per-page line numbers
+   - Infinite-scroll layout (no nested scrollbars)
+   - Auto-resize textarea to fit content
+   - ~~AV format support~~ (deferred to Phase 2)
+   - ~~Auto-formatting as you type~~ (deferred — manual Fountain format)
+   - Responsive: desktop, tablet, mobile editing
 
-3. **Script Breakdown & Analysis** (Feature #1.6)
-   - Auto-tag scenes, characters, locations, props
-   - Scene breakdown reports (CSV/PDF export)
-   - Character dialogue tracking
-   - Location management (INT/EXT grouping)
-   - Click-through navigation
+3. **Script Breakdown & Analysis** (Feature #1.6) — 🟡 **Partial**
+   - ✅ Auto-extract scenes, characters, locations from Fountain text
+   - ✅ Scene list in left sidebar with INT/EXT indicators
+   - ✅ Character list with dialogue counts and scene appearances
+   - ✅ Script statistics (total scenes, characters, locations, est. runtime, word count)
+   - ❌ Props detection (AI-detected) — deferred
+   - ❌ Click-through navigation (click element → jump in script)
+   - ❌ Export breakdown as CSV/PDF
+   - ❌ Scene metadata editing (notes, tags, production status)
 
-4. **Shot List Editor** (Feature #1.7)
-   - Per-scene shot definition with tabular interface
-   - Shot type, angle, movement, characters, action, duration
-   - Keyboard shortcuts, copy/duplicate, reorder shots
+4. **Shot List Editor** (Feature #1.7) — ✅ **Implemented**
+   - Per-scene shot definition with tabular interface (div-based grid)
+   - Shot type, angle, movement, characters, action, duration, notes
+   - Add/edit/delete shots with inline form
+   - Confirmation workflow with cost estimate
+   - Auto-generated shots from parsed scene content
+   - Summary stats (total duration, estimated cost)
+   - ~~Keyboard shortcuts~~ (deferred)
+   - ~~Copy/duplicate shot~~ (deferred)
+   - ~~Drag-and-drop reorder~~ (move up/down buttons are no-op — deferred)
 
-5. **AI-Assisted Shot Suggestions** (Feature #1.8)
-   - AI suggests coverage based on scene analysis
-   - Director accepts/edits/rejects suggestions
-   - Contextual reasoning for each suggestion
+5. **AI-Assisted Shot Suggestions** (Feature #1.8) — ✅ **Implemented (rule-based)**
+   - Deterministic shot generation from parsed scene elements
+   - Rules: first action → establishing, subsequent → wide/two-shot, dialogue → OTS/close-up
+   - Duration calculated from word count (2–10s range)
+   - 9 unit tests covering all generation rules
+   - ~~AI-powered suggestions with reasoning~~ (deferred — uses heuristic rules, not AI)
 
-6. **Shot List Confirmation** (Feature #1.9)
-   - Review and lock shot list before generation
-   - Estimated cost display
-   - Visual confirmation indicators
+6. **Shot List Confirmation** (Feature #1.9) — ✅ **Implemented**
+   - Confirm button with cost estimate dialog
+   - Locks shot list (prevents edits)
+   - Unlock for editing with confirmation dialog
+   - Visual status indicator (📝 Draft / 🔒 Confirmed)
+   - Estimated cost display per shot
+   - ~~Bulk confirmation across scenes~~ (deferred)
 
-7. **AI Storyboard Generation** (Feature #6, updated)
-   - Generates from CONFIRMED SHOT LIST only
+7. **AI Storyboard Generation** (Feature #6) — ✅ **Implemented**
+   - Generates from CONFIRMED SHOT LIST only (paradigm gate enforced)
    - One storyboard per confirmed shot
-   - Static AI images with sketch/illustrated aesthetic
-   - Cost tracking per panel
+   - Style selector: Pencil Sketch, Ink Drawing, Manga/Comic, Watercolor, Cinematic, Noir, Traditional Storyboard
+   - Online: backend API for real AI generation
+   - Offline: placeholder generation (picsum.photos fallback)
+   - Progress indicator during batch generation
+   - Cost tracking per panel and running total
+   - Card grid layout: fixed 280px cards with responsive columns
+   - Each card shows: image area + annotations (Scene, Frame, Time, Description, Script, Sound, Music)
 
-8. **Storyboard Refinement** (Feature #7)
-   - Edit button per panel
-   - Text prompts to refine panels
-   - Regenerate individual panels
-   - Undo/redo
+8. **Storyboard Refinement** (Feature #7) — ✅ **Implemented (component exists)**
+   - RefinementPanel slides in from right (desktop) or bottom (mobile)
+   - Prompt input for targeted refinement
+   - Version history tracking
+   - Escape key to close
+   - ~~Multi-step refinement workflow~~ (single prompt iteration)
 
-9. **Storyboard Export** (simplified from Feature #10)
+9. **Storyboard Export** (simplified from Feature #10) — ❌ **Not implemented**
    - Export storyboard images as files
    - Organized by scene
    - Include metadata
 
-10. **Local Collaboration** (Feature #1.10)
+10. **Local Collaboration** (Feature #1.10) — ❌ **Not implemented**
     - Comments/notes on scenes, shots, storyboards
     - Version history (local snapshots)
     - Track changes
 
-11. **Progressive Web App** (Feature #1.11)
-    - Installable PWA
-    - Offline mode with background sync
-    - Responsive design (desktop, tablet, mobile)
+11. **Progressive Web App** (Feature #1.11) — ✅ **Implemented**
+    - ✅ Installable PWA (manifest, service worker)
+    - ✅ Service Worker with NetworkFirst caching
+    - ✅ nginx configured to never cache sw.js
+    - ✅ Offline-first with IndexedDB persistence
+    - ❌ Background sync — deferred
+    - ✅ Responsive design (desktop, tablet, mobile)
 
 **Backend Features**:
-- User authentication (signup, login, password reset)
-- Project persistence to SQLite database
-- Secure AI API key proxy (keys never exposed to client)
-- Offline-first sync with conflict resolution
+- User authentication (signup, login, password reset) — ✅ Implemented
+- Project persistence to SQLite database — ✅ Implemented
+- Secure AI API key proxy (keys never exposed to client) — ✅ Implemented
+- Offline-first sync with conflict resolution — 🟡 Partial (client-side IndexedDB, sync deferred)
 
 **UI/UX**:
-- Scene-focused navigation (Features #18-20)
-- Shot list editor as central workflow
-- Script, shot list, storyboard, and split view modes
+- ✅ Scene-focused navigation (Features #18-20)
+- ✅ 4-tab layout: Script | Shots | Storyboards | Breakdown
+- ✅ Left sidebar: scene list, characters, stats, quick actions
+- ✅ Right panel: contextual tools
+- ✅ Mobile: stacked layout with bottom nav
 
 **Project Management**:
-- Server-side persistence with local caching
-- Auto-sync when online
-- Manual export/import for backup
+- ✅ Server-side persistence with local caching
+- ❌ Auto-sync when online — deferred
+- ❌ Manual export/import for backup — deferred
 
 **Success Criteria**:
-- User can create account and authenticate
-- Filmmaker can create/import a script
-- Script breakdown auto-extracts scenes, characters, locations
-- Filmmaker creates and confirms shot list
-- AI generates storyboard panels based on shot list
-- Filmmaker can refine panels
-- Filmmaker can export storyboard images
-- End-to-end workflow works for a 5-10 page script
-- Offline editing syncs when connection restored
-- **NO video generation** - storyboard export is sufficient for MVP
+- ✅ User can create account and authenticate
+- ✅ Filmmaker can create/import a script
+- ✅ Script breakdown auto-extracts scenes, characters, locations
+- ✅ Filmmaker creates and confirms shot list
+- ✅ AI generates storyboard panels based on shot list
+- ✅ Filmmaker can refine panels
+- ❌ Filmmaker can export storyboard images — deferred
+- ✅ End-to-end workflow works for a 5-10 page script (demo project)
+- 🟡 Offline editing works; sync when connection restored is deferred
+- ✅ **NO video generation** - storyboard export is sufficient for MVP
 
 ### Phase 1.1: Enhanced Visual References & Video
 
