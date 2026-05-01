@@ -3,22 +3,14 @@
  *
  * Displays current shot list statistics and confirmation status.
  */
-import { useShots, useShotListConfirmationStatus } from '@/hooks';
 
 interface ShotListStatusProps {
-  sceneId: string;
-  shotCount?: number;
+  shotCount: number;
+  isConfirmed?: boolean;
+  confirmedAt?: Date;
 }
 
-export function ShotListStatus({ sceneId, shotCount: propShotCount }: ShotListStatusProps) {
-  const { data: shots = [] } = useShots(sceneId);
-  const { data: confirmationStatus } = useShotListConfirmationStatus(sceneId);
-
-  const shotCount = propShotCount ?? shots.length;
-  const isConfirmed = confirmationStatus?.isConfirmed ?? false;
-  const confirmedAt = confirmationStatus?.confirmedAt;
-
-  const totalDuration = shots.reduce((sum, shot) => sum + shot.duration, 0);
+export function ShotListStatus({ shotCount, isConfirmed, confirmedAt }: ShotListStatusProps) {
   const estimatedCost = shotCount * 0.002;
 
   return (
@@ -26,11 +18,6 @@ export function ShotListStatus({ sceneId, shotCount: propShotCount }: ShotListSt
       <div className="shot-list-status__item">
         <span className="shot-list-status__label">Shots</span>
         <span className="shot-list-status__value">{shotCount}</span>
-      </div>
-
-      <div className="shot-list-status__item">
-        <span className="shot-list-status__label">Total Duration</span>
-        <span className="shot-list-status__value">{totalDuration}s</span>
       </div>
 
       <div className="shot-list-status__item">

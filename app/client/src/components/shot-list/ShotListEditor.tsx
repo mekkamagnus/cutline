@@ -4,7 +4,7 @@
  * Main shot list editing interface with tabular view.
  * Implements the shot-list-first paradigm with confirmation workflow.
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { ShotRow } from './ShotRow';
 import { ShotForm } from './ShotForm';
 import { ConfirmationButton } from './ConfirmationButton';
@@ -16,11 +16,13 @@ interface ShotListEditorProps {
   sceneId: string;
   onShotSelect?: (shot: Shot) => void;
   selectedShotId?: string;
+  initialShots?: Shot[];
 }
 
-export function ShotListEditor({ sceneId, onShotSelect, selectedShotId }: ShotListEditorProps) {
+export function ShotListEditor({ sceneId, onShotSelect, selectedShotId, initialShots }: ShotListEditorProps) {
   const [editingShotId, setEditingShotId] = useState<string | null>(null);
   const [isAddingShot, setIsAddingShot] = useState(false);
+  const hasSeeded = useRef(false);
 
   // Hooks
   const { data: shots = [], isLoading } = useShots(sceneId);
@@ -32,6 +34,21 @@ export function ShotListEditor({ sceneId, onShotSelect, selectedShotId }: ShotLi
   const unlockShotList = useUnlockShotList();
 
   const isConfirmed = confirmationStatus?.isConfirmed ?? false;
+  const displayShots = shots.length > 0 ? shots : (initialShots ?? []);
+
+  // Auto-seed initialShots into IndexedDB when DB is empty
+  useEffect(() => {
+    if (isLoading || shots.length > 0 || !initialShots || initialShots.length === 0 || hasSeeded.current) return;
+
+    hasSeeded.current = true;
+    const seedShots = async () => {
+      for (const shot of initialShots) {
+        const { id: _id, sceneId: _sid, shotNumber: _sn, confirmed: _c, confirmedAt: _ca, createdAt: _cra, updatedAt: _u, ...data }: typeof shot & ShotData = shot;
+        await createShot.mutateAsync({ sceneId, data });
+      }
+    };
+    seedShots();
+  }, [shots.length, isLoading, initialShots, sceneId, createShot]);
 
   // Handlers
   const handleAddShot = useCallback(
@@ -43,7 +60,7 @@ export function ShotListEditor({ sceneId, onShotSelect, selectedShotId }: ShotLi
   );
 
   const handleUpdateShot = useCallback(
-    async (shotId: string, data: Partial<ShotData>) => {
+    async (shotId: string, data: ShotData) => {
       await updateShot.mutateAsync({ id: shotId, data });
       setEditingShotId(null);
     },
@@ -60,20 +77,20 @@ export function ShotListEditor({ sceneId, onShotSelect, selectedShotId }: ShotLi
   );
 
   const handleConfirmShotList = useCallback(async () => {
-    if (shots.length === 0) {
+    if (displayShots.length === 0) {
       alert('Cannot confirm an empty shot list');
       return;
     }
 
-    const totalCost = shots.length * 0.002; // $0.002 per shot
+    const totalCost = displayShots.length * 0.002;
     const confirmed = window.confirm(
-      `Confirm shot list?\n\n${shots.length} shots will generate approximately $${totalCost.toFixed(3)} in AI generation costs.\n\nAfter confirmation, you cannot edit shots until you unlock.`
+      `Confirm shot list?\n\n${displayShots.length} shots will generate approximately $${totalCost.toFixed(3)} in AI generation costs.\n\nAfter confirmation, you cannot edit shots until you unlock.`
     );
 
     if (confirmed) {
       await confirmShotList.mutateAsync(sceneId);
     }
-  }, [confirmShotList, sceneId, shots.length]);
+  }, [confirmShotList, sceneId, displayShots.length]);
 
   const handleUnlockShotList = useCallback(async () => {
     const confirmed = window.confirm(
@@ -87,21 +104,21 @@ export function ShotListEditor({ sceneId, onShotSelect, selectedShotId }: ShotLi
 
   const handleMoveShot = useCallback(
     async (shotId: string, direction: 'up' | 'down') => {
-      const currentIndex = shots.findIndex((s) => s.id === shotId);
+      const currentIndex = displayShots.findIndex((s) => s.id === shotId);
       if (currentIndex === -1) return;
 
       const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-      if (newIndex < 0 || newIndex >= shots.length) return;
+      if (newIndex < 0 || newIndex >= displayShots.length) return;
 
-      // Create new order
-      const newShots = [...shots];
-      [newShots[currentIndex], newShots[newIndex]] = [newShots[newIndex], newShots[currentIndex]];
-
-      // Update shot numbers
-      // Note: This would require a reorder mutation - for now just visual reorder
-      // In full implementation, we'd call a reorder API here
+      const newShots = [...displayShots];
+      const temp = newShots[currentIndex];
+      const swapTarget = newShots[newIndex];
+      if (temp && swapTarget) {
+        newShots[currentIndex] = swapTarget;
+        newShots[newIndex] = temp;
+      }
     },
-    [shots]
+    [displayShots]
   );
 
   if (isLoading) {
@@ -118,7 +135,7 @@ export function ShotListEditor({ sceneId, onShotSelect, selectedShotId }: ShotLi
       <div className="shot-list-editor__header">
         <h2 className="shot-list-editor__title">Shot List</h2>
         <ShotListStatus
-          shotCount={shots.length}
+          shotCount={displayShots.length}
           isConfirmed={isConfirmed}
           confirmedAt={confirmationStatus?.confirmedAt}
         />
@@ -139,7 +156,7 @@ export function ShotListEditor({ sceneId, onShotSelect, selectedShotId }: ShotLi
 
         <ConfirmationButton
           isConfirmed={isConfirmed}
-          shotCount={shots.length}
+          shotCount={displayShots.length}
           onConfirm={handleConfirmShotList}
           onUnlock={handleUnlockShotList}
           isConfirming={confirmShotList.isPending}
@@ -152,7 +169,7 @@ export function ShotListEditor({ sceneId, onShotSelect, selectedShotId }: ShotLi
         <ShotForm
           onSave={handleAddShot}
           onCancel={() => setIsAddingShot(false)}
-          shotNumber={shots.length + 1}
+          shotNumber={displayShots.length + 1}
           isCreating
         />
       )}
@@ -172,12 +189,12 @@ export function ShotListEditor({ sceneId, onShotSelect, selectedShotId }: ShotLi
         </div>
 
         {/* Shot rows */}
-        {shots.length === 0 && !isAddingShot ? (
+        {displayShots.length === 0 && !isAddingShot ? (
           <div className="shot-list-editor__empty">
             <p>No shots yet. Add your first shot to get started.</p>
           </div>
         ) : (
-          shots.map((shot) => (
+          displayShots.map((shot) => (
             <ShotRow
               key={shot.id}
               shot={shot}
@@ -191,21 +208,21 @@ export function ShotListEditor({ sceneId, onShotSelect, selectedShotId }: ShotLi
               onCancelEdit={() => setEditingShotId(null)}
               onMoveUp={() => handleMoveShot(shot.id, 'up')}
               onMoveDown={() => handleMoveShot(shot.id, 'down')}
-              canMoveUp={shots[0]?.id !== shot.id}
-              canMoveDown={shots[shots.length - 1]?.id !== shot.id}
+              canMoveUp={displayShots[0]?.id !== shot.id}
+              canMoveDown={displayShots[displayShots.length - 1]?.id !== shot.id}
             />
           ))
         )}
       </div>
 
       {/* Summary */}
-      {shots.length > 0 && (
+      {displayShots.length > 0 && (
         <div className="shot-list-editor__summary">
           <span className="shot-list-editor__stat">
-            Total Duration: {shots.reduce((sum, s) => sum + s.duration, 0)}s
+            Total Duration: {displayShots.reduce((sum, s) => sum + s.duration, 0)}s
           </span>
           <span className="shot-list-editor__stat">
-            Est. Cost: ${(shots.length * 0.002).toFixed(3)}
+            Est. Cost: ${(displayShots.length * 0.002).toFixed(3)}
           </span>
         </div>
       )}

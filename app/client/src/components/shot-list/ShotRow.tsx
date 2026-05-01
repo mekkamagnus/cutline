@@ -4,6 +4,7 @@
  * Individual shot row in the shot list with inline editing and move functionality.
  */
 import { useState } from 'react';
+import { ShotForm } from './ShotForm';
 import type { Shot, ShotData } from '@/types';
 
 interface ShotRowProps {
@@ -12,7 +13,7 @@ interface ShotRowProps {
   isConfirmed: boolean;
   isSelected: boolean;
   onEdit: () => void;
-  onSave: (data: Partial<ShotData>) => void;
+  onSave: (data: ShotData) => void;
   onDelete: () => void;
   onSelect: () => void;
   onCancelEdit: () => void;
@@ -40,34 +41,28 @@ export function ShotRow({
   const [isHovered, setIsHovered] = useState(false);
 
   if (isEditing) {
-    return (
-      <ShotForm
-        initialData={shot}
-        onSave={onSave}
-        onCancel={onCancelEdit}
-      />
-    );
+    return <ShotForm initialData={shot} onSave={onSave} onCancel={onCancelEdit} />;
   }
 
   return (
-    <tr
-      className={`shot-row ${isSelected ? 'shot-row--selected' : ''} ${isConfirmed ? 'shot-row--confirmed' : ''}`}
+    <div
+      className={`shot-list-editor__row ${isSelected ? 'shot-row--selected' : ''} ${isConfirmed ? 'shot-row--confirmed' : ''}`}
       onClick={onSelect}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <td className="shot-row__cell shot-row__cell--number">{shot.shotNumber}</td>
-      <td className="shot-row__cell shot-row__cell--type">
+      <div className="shot-list-editor__cell shot-list-editor__cell--number">{shot.shotNumber}</div>
+      <div className="shot-list-editor__cell shot-list-editor__cell--type">
         <span className={`shot-type shot-type--${shot.type}`}>{shot.type}</span>
-      </td>
-      <td className="shot-row__cell shot-row__cell--angle">{shot.angle}</td>
-      <td className="shot-row__cell shot-row__cell--movement">{shot.movement}</td>
-      <td className="shot-row__cell shot-row__cell--characters">
+      </div>
+      <div className="shot-list-editor__cell shot-list-editor__cell--angle">{shot.angle}</div>
+      <div className="shot-list-editor__cell shot-list-editor__cell--movement">{shot.movement}</div>
+      <div className="shot-list-editor__cell shot-list-editor__cell--characters">
         {shot.charactersInFrame.length > 0 ? shot.charactersInFrame.join(', ') : '-'}
-      </td>
-      <td className="shot-row__cell shot-row__cell--action">{shot.actionDescription}</td>
-      <td className="shot-row__cell shot-row__cell--duration">{shot.duration}s</td>
-      <td className="shot-row__cell shot-row__cell--actions">
+      </div>
+      <div className="shot-list-editor__cell shot-list-editor__cell--action">{shot.actionDescription}</div>
+      <div className="shot-list-editor__cell shot-list-editor__cell--duration">{shot.duration}s</div>
+      <div className="shot-list-editor__cell shot-list-editor__cell--actions">
         {!isConfirmed && (
           <div className="shot-row__actions">
             <button
@@ -112,7 +107,7 @@ export function ShotRow({
             )}
           </div>
         )}
-      </td>
-    </tr>
+      </div>
+    </div>
   );
 }

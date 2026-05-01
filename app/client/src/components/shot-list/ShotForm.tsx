@@ -11,8 +11,10 @@ import type { Shot, ShotData } from '@/types';
 
 interface ShotFormProps {
   initialData?: Shot;
-  onSave: (data: Partial<ShotData>) => void;
+  onSave: (data: ShotData) => void;
   onCancel: () => void;
+  shotNumber?: number;
+  isCreating?: boolean;
 }
 
 const defaultFormData: ShotData = {
@@ -25,12 +27,11 @@ const defaultFormData: ShotData = {
   notes: undefined,
 };
 
-export function ShotForm({ initialData, onSave, onCancel }: ShotFormProps) {
+export function ShotForm({ initialData, onSave, onCancel, shotNumber, isCreating }: ShotFormProps) {
   const [formData, setFormData] = useState<ShotData>(
     initialData ? { ...initialData } : defaultFormData
   );
 
-  // Update form when initialData changes
   useEffect(() => {
     if (initialData) {
       setFormData(initialData);
@@ -138,7 +139,7 @@ export function ShotForm({ initialData, onSave, onCancel }: ShotFormProps) {
           type="submit"
           className="shot-form__btn shot-form__btn--save"
         >
-          {initialData ? 'Update Shot' : 'Add Shot'}
+          {isCreating ? 'Add Shot' : 'Update Shot'}
         </button>
       </div>
     </form>
