@@ -132,11 +132,15 @@
 
   /* ========== Script Editor ========== */
   --script-max-width: 850px;
-  --script-action-max-chars: 60;
-  --script-dialogue-max-chars: 35;
   --script-font-size: 13pt;
   --script-line-height: 1.4;
   --script-caret-color: var(--accent);
+
+  /* Hollywood Standard widths (10-pitch Courier) */
+  --script-action-width: 60ch;
+  --script-character-width: 20ch;
+  --script-dialogue-width: 35ch;
+  --script-parenthetical-width: 20ch;
 
   /* ========== Touch Targets ========== */
   --touch-target-min: 44px;

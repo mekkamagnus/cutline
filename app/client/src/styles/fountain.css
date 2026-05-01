@@ -5,6 +5,27 @@
  * Based on mockup.html design system.
  */
 
+/* ========== Base Line Styling ========== */
+.fountain-line {
+  font-family: var(--font-mono);
+  font-size: var(--script-font-size);
+  line-height: var(--script-line-height);
+  white-space: pre-wrap;
+  padding: 0;
+  margin: 0;
+  min-height: 1.4em;
+}
+
+/* ========== Highlight Container ========== */
+.fountain-highlight {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
 /* ========== Scene Headings ========== */
 .fountain-scene-heading {
   color: var(--fountain-scene);
@@ -20,6 +41,9 @@
   text-transform: uppercase;
   font-weight: var(--font-weight-semibold);
   text-align: center;
+  max-width: var(--script-character-width);
+  margin-left: auto;
+  margin-right: auto;
   margin-top: var(--space-4);
   margin-bottom: var(--space-1);
 }
@@ -28,7 +52,7 @@
 .fountain-dialogue {
   color: var(--fountain-dialogue);
   text-align: center;
-  max-width: 35ch;
+  max-width: var(--script-dialogue-width);
   margin-left: auto;
   margin-right: auto;
   line-height: var(--script-line-height);
@@ -39,7 +63,7 @@
   color: var(--fountain-parenthetical);
   font-style: italic;
   text-align: center;
-  max-width: 25ch;
+  max-width: var(--script-parenthetical-width);
   margin-left: auto;
   margin-right: auto;
   margin-top: var(--space-1);
@@ -49,7 +73,7 @@
 /* ========== Action ========== */
 .fountain-action {
   color: var(--fountain-action);
-  max-width: 60ch;
+  max-width: var(--script-action-width);
   line-height: var(--script-line-height);
   margin-bottom: var(--space-3);
 }
@@ -93,6 +117,13 @@
   margin-bottom: var(--space-8);
 }
 
+/* ========== Page Divider (auto-generated) ========== */
+.fountain-page-divider {
+  border-top: 1px dashed var(--border-light);
+  margin: var(--space-4) 0;
+  opacity: 0.5;
+}
+
 /* ========== Section Headers ========== */
 .fountain-section {
   color: var(--text-muted);
@@ -108,27 +139,4 @@
   font-style: italic;
   font-size: var(--font-size-sm);
   margin-bottom: var(--space-4);
-}
-
-/* ========== Base Line Styling ========== */
-.fountain-line {
-  font-family: var(--font-mono);
-  font-size: var(--script-font-size);
-  line-height: var(--script-line-height);
-  white-space: pre-wrap;
-  padding: 0;
-  margin: 0;
-  min-height: 1.4em;
-}
-
-/* ========== Highlight Container ========== */
-.fountain-highlight {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  overflow: hidden;
-  z-index: 1;
 }

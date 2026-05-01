@@ -35,6 +35,14 @@ export function ScriptEditor({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Auto-resize textarea to fit content
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [content]);
+
   // Parse content on change
   useEffect(() => {
     const parseResult = fountainParser.parse(content);
@@ -165,11 +173,18 @@ export function ScriptEditor({
     <div style={editorContainerStyles}>
       {/* Script Page - styled like mockup */}
       <div style={scriptPageStyles}>
-        {/* Line Numbers (optional) */}
+        {/* Line Numbers with page breaks */}
         <div style={lineNumbersStyles}>
-          {content.split('\n').map((_, i) => (
-            <div key={i} style={lineNumberStyles}>{i + 1}</div>
-          ))}
+          {content.split('\n').map((_, i) => {
+            const lineInPage = (i % LINES_PER_PAGE) + 1;
+            const isPageBreak = i > 0 && i % LINES_PER_PAGE === 0;
+            return (
+              <div key={i}>
+                {isPageBreak && <div className="fountain-page-divider" />}
+                <div style={lineNumberStyles}>{lineInPage}</div>
+              </div>
+            );
+          })}
         </div>
 
         {/* Editor Area */}
@@ -234,11 +249,12 @@ SARAH enters, looking rushed."
   );
 }
 
+const LINES_PER_PAGE = 55;
+
 // Styles matching mockup.html design
 const editorContainerStyles: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
-  padding: 'var(--space-6)',
   background: 'var(--bg-primary)',
 };
 
@@ -246,20 +262,14 @@ const scriptPageStyles: React.CSSProperties = {
   width: '100%',
   maxWidth: 'var(--script-max-width)',
   margin: '0 auto',
-  background: '#1e1e1e',
-  padding: 'var(--space-10) var(--space-16)',
-  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--border-color)',
-  borderRadius: 'var(--radius-md)',
-  minHeight: '1100px',
-  border: '1px solid var(--border-color)',
+  padding: 'var(--space-8) var(--space-12)',
   position: 'relative',
 };
 
 const lineNumbersStyles: React.CSSProperties = {
   position: 'absolute',
-  left: 'var(--space-4)',
-  top: 'var(--space-10)',
-  bottom: 'var(--space-10)',
+  left: 'var(--space-2)',
+  top: 'var(--space-8)',
   width: 'var(--space-6)',
   textAlign: 'right',
   color: 'var(--text-muted)',
@@ -268,7 +278,6 @@ const lineNumbersStyles: React.CSSProperties = {
   opacity: 0.5,
   pointerEvents: 'none',
   userSelect: 'none',
-  overflow: 'hidden',
 };
 
 const lineNumberStyles: React.CSSProperties = {
@@ -284,7 +293,7 @@ const textareaStyles: React.CSSProperties = {
   fontFamily: 'var(--font-mono)',
   fontSize: 'var(--script-font-size)',
   lineHeight: 'var(--script-line-height)',
-  color: 'var(--fountain-dialogue)',
+  color: 'transparent',
   whiteSpace: 'pre-wrap',
   caretColor: 'var(--accent)',
   background: 'transparent',
@@ -292,7 +301,6 @@ const textareaStyles: React.CSSProperties = {
   outline: 'none',
   resize: 'none',
   width: '100%',
-  minHeight: '1000px',
   padding: 0,
   margin: 0,
 };
