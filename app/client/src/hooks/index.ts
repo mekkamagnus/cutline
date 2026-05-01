@@ -46,6 +46,7 @@ export {
 
 // Storyboard hooks
 export {
+  useStoryboardsForShots,
   useStoryboardForShot,
   useStoryboard,
   useCreateStoryboard,

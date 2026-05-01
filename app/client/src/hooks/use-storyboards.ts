@@ -35,6 +35,29 @@ export const storyboardKeys = {
 };
 
 /**
+ * Hook to fetch storyboards for multiple shots at once
+ */
+export function useStoryboardsForShots(shotIds: string[]) {
+  return useQuery({
+    queryKey: [...storyboardKeys.lists(), { shotIds }],
+    queryFn: async (): Promise<Map<string, StoryboardPanel>> => {
+      if (shotIds.length === 0) return new Map();
+      const repo = getStoryboardRepo();
+      const result = await repo.findByShotIds(shotIds).run();
+      if (Result.isErr(result)) {
+        throw result.left;
+      }
+      const map = new Map<string, StoryboardPanel>();
+      for (const panel of result.right) {
+        map.set(panel.shotId, panel);
+      }
+      return map;
+    },
+    enabled: shotIds.length > 0,
+  });
+}
+
+/**
  * Hook to fetch storyboard for a shot (one-to-one)
  */
 export function useStoryboardForShot(shotId: string | undefined) {
