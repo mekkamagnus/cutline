@@ -32,7 +32,35 @@ interface GenerateSingleBody {
   refinementPrompt?: string;
 }
 
+interface DynamicGenerateBody {
+  shots: Array<{
+    shotId: string;
+    prompt: string;
+  }>;
+  style?: string;
+  providerId: string;
+  providerName: string;
+  model: string;
+  endpoint: string;
+  costPerImage?: number;
+}
+
+interface DynamicGenerateSingleBody {
+  shotId: string;
+  prompt: string;
+  style?: string;
+  providerId: string;
+  providerName: string;
+  model: string;
+  endpoint: string;
+  costPerImage?: number;
+  refinementPrompt?: string;
+}
+
 export const aiRoutes = new Elysia({ prefix: '/api/ai' })
+  .derive(({ user }: { user?: { userId?: string } }) => ({
+    userId: user?.userId ?? 'dev-user',
+  }))
   // ========== API KEY MANAGEMENT ==========
 
   // Store an API key for the current user
@@ -44,21 +72,23 @@ export const aiRoutes = new Elysia({ prefix: '/api/ai' })
     return { success: true, message: `API key stored for ${body.provider}` };
   }, {
     body: t.Object({
-      provider: t.Union([t.Literal('sdxl'), t.Literal('wanxiang')]),
+      provider: t.String({ minLength: 1 }),
       apiKey: t.String({ minLength: 1 }),
     }),
   })
 
   // Check if user has API keys configured
   .get('/keys', ({ userId }: { userId: string }) => {
-    return {
-      sdxl: AIProxyService.hasApiKey(userId, 'sdxl'),
-      wanxiang: AIProxyService.hasApiKey(userId, 'wanxiang'),
-    };
+    return AIProxyService.listApiKeys(userId);
+  })
+
+  // Check if a specific provider has a key
+  .get('/keys/:provider', ({ params, userId }: { params: { provider: string }; userId: string }) => {
+    return { hasKey: AIProxyService.hasApiKey(userId, params.provider) };
   })
 
   // Delete an API key
-  .delete('/keys/:provider', ({ params, userId }: { params: { provider: AIProvider }; userId: string }) => {
+  .delete('/keys/:provider', ({ params, userId }: { params: { provider: string }; userId: string }) => {
     const result = AIProxyService.deleteApiKey(userId, params.provider);
     if (!result.success) {
       throw new Error(result.error);
@@ -203,6 +233,124 @@ export const aiRoutes = new Elysia({ prefix: '/api/ai' })
       shotId: t.String(),
       style: t.Optional(t.String()),
       provider: t.Optional(t.Union([t.Literal('sdxl'), t.Literal('wanxiang')])),
+      refinementPrompt: t.Optional(t.String()),
+    }),
+  })
+
+  // ========== DYNAMIC PROVIDER GENERATION ==========
+
+  // Generate storyboards using a dynamically-configured provider
+  .post('/generate/dynamic/storyboards', async ({ body, userId }: { body: DynamicGenerateBody; userId: string }) => {
+    const { shots, style = 'cinematic', providerId, providerName, model, endpoint, costPerImage } = body;
+
+    if (!shots || shots.length === 0) {
+      return { success: false, error: 'No shots provided', generated: 0, totalCost: 0, storyboards: [] };
+    }
+
+    if (!endpoint || !model) {
+      return { success: false, error: 'Provider endpoint and model are required', generated: 0, totalCost: 0, storyboards: [] };
+    }
+
+    const storyboards = [];
+    for (const shot of shots) {
+      const params = {
+        prompt: shot.prompt,
+        negativePrompt: 'blurry, low quality, distorted, deformed',
+        style,
+        aspectRatio: '16:9' as const,
+        width: 1024,
+        height: 576,
+        steps: 30,
+      };
+
+      const result = await AIProxyService.generateDynamic(
+        endpoint, undefined, model, providerName, providerId, params, costPerImage, userId,
+      );
+
+      if (result.success && result.data) {
+        const id = `sb-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+        storyboards.push({
+          id,
+          shotId: shot.shotId,
+          imageUrl: result.data.url,
+          cost: result.data.cost,
+          provider: providerId,
+          model,
+        });
+      }
+    }
+
+    return {
+      success: true,
+      generated: storyboards.length,
+      totalCost: storyboards.reduce((sum: number, s: typeof storyboards[0]) => sum + s.cost, 0),
+      storyboards,
+    };
+  }, {
+    body: t.Object({
+      shots: t.Array(t.Object({
+        shotId: t.String(),
+        prompt: t.String(),
+      })),
+      style: t.Optional(t.String()),
+      providerId: t.String({ minLength: 1 }),
+      providerName: t.String(),
+      model: t.String({ minLength: 1 }),
+      endpoint: t.String({ minLength: 1 }),
+      costPerImage: t.Optional(t.Number()),
+    }),
+  })
+
+  // Generate single storyboard using a dynamically-configured provider
+  .post('/generate/dynamic/single', async ({ body, userId }: { body: DynamicGenerateSingleBody; userId: string }) => {
+    const { shotId, prompt, style = 'cinematic', providerId, providerName, model, endpoint, costPerImage, refinementPrompt } = body;
+
+    if (!endpoint || !model) {
+      return { success: false, error: 'Provider endpoint and model are required' };
+    }
+
+    if (!prompt && !refinementPrompt) {
+      return { success: false, error: 'Prompt is required' };
+    }
+
+    const params = {
+      prompt: refinementPrompt || prompt,
+      negativePrompt: 'blurry, low quality, distorted, deformed',
+      style,
+      aspectRatio: '16:9' as const,
+      width: 1024,
+      height: 576,
+      steps: 30,
+    };
+
+    const result = await AIProxyService.generateDynamic(
+      endpoint, undefined, model, providerName, providerId, params, costPerImage, userId,
+    );
+
+    if (!result.success || !result.data) {
+      return { success: false, error: result.error || 'Generation failed' };
+    }
+
+    return {
+      success: true,
+      id: `sb-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      shotId,
+      imageUrl: result.data.url,
+      cost: result.data.cost,
+      provider: providerId,
+      model,
+    };
+  }, {
+    body: t.Object({
+      shotId: t.String(),
+      prompt: t.String(),
+      style: t.Optional(t.String()),
+      providerId: t.String({ minLength: 1 }),
+      providerName: t.String(),
+      model: t.String({ minLength: 1 }),
+      endpoint: t.String({ minLength: 1 }),
+      costPerImage: t.Optional(t.Number()),
       refinementPrompt: t.Optional(t.String()),
     }),
   })

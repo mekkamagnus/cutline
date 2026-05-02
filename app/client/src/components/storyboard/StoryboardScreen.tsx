@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { StoryboardGenerator } from './StoryboardGenerator';
 import { RefinementPanel } from './RefinementPanel';
 import { useShots, useShotListConfirmationStatus, useStoryboardsForShots, useCreateShot } from '@/hooks';
+import { useSettingsStore, type AvailableModel } from '@/stores/settings-store';
+import { api } from '@/lib/api-client';
+import { buildShotPrompt } from '@/lib/build-shot-prompt';
 import type { Shot, ShotData, StoryboardPanel } from '@/types';
 
 interface StoryboardScreenProps {
@@ -9,14 +12,20 @@ interface StoryboardScreenProps {
   initialShots?: Shot[];
 }
 
+const DEFAULT_PROVIDER_ID = 'google';
+const DEFAULT_MODEL_ID = 'gemini-3.1-flash';
+
 export function StoryboardScreen({ sceneId, initialShots }: StoryboardScreenProps) {
   const [selectedStoryboard, setSelectedStoryboard] = useState<StoryboardPanel | null>(null);
   const [storyboardMap, setStoryboardMap] = useState<Map<string, StoryboardPanel>>(new Map());
+  const [generatingShotId, setGeneratingShotId] = useState<string | null>(null);
+  const [cardError, setCardError] = useState<string | null>(null);
   const hasSeeded = useRef(false);
 
   const { data: shots = [], isLoading } = useShots(sceneId);
   const { data: confirmationStatus } = useShotListConfirmationStatus(sceneId);
   const createShot = useCreateShot();
+  const getAvailableModels = useSettingsStore((s) => s.getAvailableModels);
 
   const displayShots = shots.length > 0 ? shots : (initialShots ?? []);
 
@@ -46,6 +55,67 @@ export function StoryboardScreen({ sceneId, initialShots }: StoryboardScreenProp
   const storyboards = Array.from(storyboardMap.values());
   const allGenerated = displayShots.length > 0 && storyboards.length >= displayShots.length;
   const isConfirmed = confirmationStatus?.isConfirmed ?? false;
+
+  const getDefaultModel = useCallback((): AvailableModel | undefined => {
+    const models = getAvailableModels();
+    return models.find((m) => m.providerId === DEFAULT_PROVIDER_ID && m.modelId === DEFAULT_MODEL_ID)
+      ?? models[0];
+  }, [getAvailableModels]);
+
+  const handleCardGenerate = useCallback(async (shot: Shot) => {
+    if (generatingShotId) return;
+
+    const model = getDefaultModel();
+    if (!model) {
+      setCardError('No model available. Configure a provider in Settings.');
+      return;
+    }
+
+    setGeneratingShotId(shot.id);
+    setCardError(null);
+
+    try {
+      const prompt = buildShotPrompt(shot, 'manga');
+      const response = await api.post<{ success: boolean; id: string; shotId: string; imageUrl: string; cost: number; provider: string; model: string }>('/api/ai/generate/dynamic/single', {
+        shotId: shot.id,
+        prompt,
+        style: 'manga',
+        providerId: model.providerId,
+        providerName: model.providerName,
+        model: model.modelId,
+        endpoint: model.openaiEndpoint,
+        costPerImage: model.pricePerImage,
+      });
+
+      if (!response.success || !response.data) {
+        throw new Error(response.error || 'Generation failed');
+      }
+
+      const panel: StoryboardPanel = {
+        id: response.data.id,
+        shotId: shot.id,
+        imageUrl: response.data.imageUrl,
+        generatedAt: new Date(),
+        generationParams: { prompt, width: 1024, height: 576 },
+        apiProvider: response.data.provider,
+        model: response.data.model,
+        cost: response.data.cost,
+        style: 'manga',
+        version: 1,
+        previousVersions: [],
+      };
+
+      setStoryboardMap((prev) => {
+        const next = new Map(prev);
+        next.set(shot.id, panel);
+        return next;
+      });
+    } catch (err) {
+      setCardError(err instanceof Error ? err.message : 'Generation failed');
+    } finally {
+      setGeneratingShotId(null);
+    }
+  }, [generatingShotId, getDefaultModel]);
 
   const handleRefinementClose = useCallback(() => {
     setSelectedStoryboard(null);
@@ -116,11 +186,18 @@ export function StoryboardScreen({ sceneId, initialShots }: StoryboardScreenProp
       <div className="storyboard-grid">
         {displayShots.map((shot) => {
           const storyboard = storyboardMap.get(shot.id);
+          const isGenerating = generatingShotId === shot.id;
           return (
             <div
               key={shot.id}
               className={`storyboard-card${selectedStoryboard?.id === storyboard?.id ? ' storyboard-card--selected' : ''}`}
-              onClick={() => storyboard && setSelectedStoryboard(storyboard)}
+              onClick={() => {
+                if (storyboard) {
+                  setSelectedStoryboard(storyboard);
+                } else if (!isGenerating) {
+                  handleCardGenerate(shot);
+                }
+              }}
             >
               {/* Image panel */}
               <div className="storyboard-card__image-area">
@@ -131,9 +208,16 @@ export function StoryboardScreen({ sceneId, initialShots }: StoryboardScreenProp
                     className="storyboard-card__image"
                   />
                 ) : (
-                  <div className="storyboard-card__placeholder">
+                  <div className={`storyboard-card__placeholder${isGenerating ? ' storyboard-card__placeholder--loading' : ''}`}>
                     <span className="storyboard-card__placeholder-shot">Shot {shot.shotNumber}</span>
-                    <span className="storyboard-card__placeholder-action">Generate</span>
+                    {isGenerating ? (
+                      <span className="storyboard-card__placeholder-action">Generating...</span>
+                    ) : (
+                      <span className="storyboard-card__placeholder-action">Generate</span>
+                    )}
+                    {cardError && !isGenerating && generatingShotId !== shot.id && (
+                      <span className="storyboard-card__placeholder-error">{cardError}</span>
+                    )}
                   </div>
                 )}
               </div>

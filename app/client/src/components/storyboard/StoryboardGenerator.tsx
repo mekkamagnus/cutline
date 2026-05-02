@@ -4,9 +4,11 @@
  * Controls for generating storyboards from confirmed shot lists.
  * Implements paradigm gate: requires confirmed shot list.
  */
-import { useState, useCallback } from 'react';
-import { useGenerateStoryboards, useShotListConfirmationStatus, useShots } from '@/hooks';
-import type { GenerationStatus } from '@/hooks';
+import { useState, useCallback, useMemo } from 'react';
+import { useShotListConfirmationStatus, useShots } from '@/hooks';
+import { useSettingsStore, type AvailableModel } from '@/stores/settings-store';
+import { api } from '@/lib/api-client';
+import { buildShotPrompt } from '@/lib/build-shot-prompt';
 
 interface StoryboardGeneratorProps {
   sceneId: string;
@@ -23,48 +25,94 @@ const STORYBOARD_STYLES = [
   { value: 'storyboard', label: 'Traditional Storyboard' },
 ] as const;
 
+const DEFAULT_PROVIDER_ID = 'google';
+const DEFAULT_MODEL_ID = 'gemini-3.1-flash';
+
 export function StoryboardGenerator({ sceneId, onGenerationComplete }: StoryboardGeneratorProps) {
-  const [selectedStyle, setSelectedStyle] = useState('pencil-sketch');
-  const [generationStatus, setGenerationStatus] = useState<GenerationStatus | null>(null);
+  const [selectedStyle, setSelectedStyle] = useState('manga');
+  const [selectedProviderId, setSelectedProviderId] = useState(DEFAULT_PROVIDER_ID);
+  const [selectedModelId, setSelectedModelId] = useState(DEFAULT_MODEL_ID);
+  const [error, setError] = useState<string | null>(null);
 
   const { data: shots = [] } = useShots(sceneId);
   const { data: confirmationStatus } = useShotListConfirmationStatus(sceneId);
-  const generateStoryboards = useGenerateStoryboards();
+  const { getAvailableModels, providers } = useSettingsStore();
+
+  const availableModels = useMemo(() => getAvailableModels(), [providers]);
+
+  const enabledProviders = useMemo(() => {
+    const seen = new Set<string>();
+    return availableModels.filter((m) => {
+      if (seen.has(m.providerId)) return false;
+      seen.add(m.providerId);
+      return true;
+    }).map((m) => ({ id: m.providerId, name: m.providerName }));
+  }, [availableModels]);
+
+  const providerModels = useMemo(
+    () => availableModels.filter((m) => m.providerId === selectedProviderId),
+    [availableModels, selectedProviderId],
+  );
+
+  const selectedModel = useMemo<AvailableModel | undefined>(() => {
+    const found = availableModels.find((m) => m.providerId === selectedProviderId && m.modelId === selectedModelId);
+    if (found) return found;
+    return providerModels[0];
+  }, [availableModels, selectedProviderId, selectedModelId, providerModels]);
+
+  // Auto-select first model when switching providers
+  const handleProviderChange = useCallback((newProviderId: string) => {
+    setSelectedProviderId(newProviderId);
+    const firstModel = availableModels.find((m) => m.providerId === newProviderId);
+    setSelectedModelId(firstModel?.modelId ?? '');
+  }, [availableModels]);
 
   const isConfirmed = confirmationStatus?.isConfirmed ?? false;
   const confirmedShots = shots.filter((s) => s.confirmed);
-  const ungeneratedShots = shots.filter((s) => s.confirmed); // Would need storyboard check
+
+  const costPerImage = selectedModel?.pricePerImage ?? 0.01;
+  const estimatedCost = confirmedShots.length * costPerImage;
 
   const handleGenerate = useCallback(async () => {
-    if (!isConfirmed) {
-      alert('Shot list must be confirmed before generating storyboards');
+    setError(null);
+
+    if (!selectedModel) {
+      setError('No model selected. Choose a provider and model first.');
       return;
     }
 
-    if (confirmedShots.length === 0) {
-      alert('No confirmed shots to generate');
-      return;
+    const shotsPayload = confirmedShots.map((s) => ({
+      shotId: s.id,
+      prompt: buildShotPrompt(s, selectedStyle),
+    }));
+
+    try {
+      const response = await api.post('/api/ai/generate/dynamic/storyboards', {
+        shots: shotsPayload,
+        style: selectedStyle,
+        providerId: selectedModel.providerId,
+        providerName: selectedModel.providerName,
+        model: selectedModel.modelId,
+        endpoint: selectedModel.openaiEndpoint,
+        costPerImage: selectedModel.pricePerImage,
+      });
+
+      if (!response.success) {
+        throw new Error(response.error || 'Generation failed');
+      }
+
+      onGenerationComplete?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Generation failed');
     }
-
-    const shotIds = confirmedShots.map((s) => s.id);
-
-    await generateStoryboards.mutateAsync({
-      shotIds,
-      style: selectedStyle,
-      onProgress: setGenerationStatus,
-    });
-
-    onGenerationComplete?.();
-  }, [isConfirmed, confirmedShots, selectedStyle, generateStoryboards, onGenerationComplete]);
-
-  const isGenerating = generationStatus?.isGenerating ?? false;
+  }, [confirmedShots, selectedStyle, selectedModel, onGenerationComplete]);
 
   return (
     <div className="storyboard-generator">
       {/* Paradigm gate warning */}
       {!isConfirmed && (
         <div className="storyboard-generator__warning">
-          ⚠️ Shot list must be confirmed before generating storyboards
+          Shot list must be confirmed before generating storyboards
         </div>
       )}
 
@@ -75,7 +123,6 @@ export function StoryboardGenerator({ sceneId, onGenerationComplete }: Storyboar
           className="storyboard-generator__select"
           value={selectedStyle}
           onChange={(e) => setSelectedStyle(e.target.value)}
-          disabled={isGenerating}
         >
           {STORYBOARD_STYLES.map((style) => (
             <option key={style.value} value={style.value}>
@@ -85,22 +132,55 @@ export function StoryboardGenerator({ sceneId, onGenerationComplete }: Storyboar
         </select>
       </div>
 
+      {/* Provider selector */}
+      <div className="storyboard-generator__style-selector">
+        <label className="storyboard-generator__label">Provider</label>
+        <select
+          className="storyboard-generator__select"
+          value={selectedProviderId}
+          onChange={(e) => handleProviderChange(e.target.value)}
+        >
+          {enabledProviders.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Model selector */}
+      <div className="storyboard-generator__style-selector">
+        <label className="storyboard-generator__label">Model</label>
+        <select
+          className="storyboard-generator__select"
+          value={selectedModel?.modelId ?? ''}
+          onChange={(e) => setSelectedModelId(e.target.value)}
+        >
+          {providerModels.map((m) => (
+            <option key={m.modelId} value={m.modelId}>
+              {m.modelId}
+              {m.pricePerImage != null ? ` ($${m.pricePerImage}/img)` : ''}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Inline error */}
+      {error && (
+        <div className="storyboard-generator__warning">
+          {error}
+        </div>
+      )}
+
       {/* Generation controls */}
       <div className="storyboard-generator__controls">
         <button
           type="button"
           className="storyboard-generator__button"
           onClick={handleGenerate}
-          disabled={!isConfirmed || isGenerating || confirmedShots.length === 0}
+          disabled={!isConfirmed || confirmedShots.length === 0}
         >
-          {isGenerating ? (
-            <>
-              <span className="storyboard-generator__spinner">⏳</span>
-              Generating...
-            </>
-          ) : (
-            <>🎨 Generate Storyboards</>
-          )}
+          Generate Storyboards
         </button>
 
         {/* Stats */}
@@ -112,26 +192,11 @@ export function StoryboardGenerator({ sceneId, onGenerationComplete }: Storyboar
           <div className="storyboard-generator__stat">
               <span className="storyboard-generator__stat-label">Est. Cost</span>
               <span className="storyboard-generator__stat-value">
-                  ${(confirmedShots.length * 0.002).toFixed(3)}
+                  ${estimatedCost.toFixed(3)}
               </span>
           </div>
         </div>
       </div>
-
-      {/* Progress indicator */}
-      {isGenerating && generationStatus && (
-          <div className="storyboard-generator__progress">
-              <div className="storyboard-generator__progress-bar">
-                  <div
-                      className="storyboard-generator__progress-fill"
-                      style={{ width: `${generationStatus.progress}%` }}
-                  />
-              </div>
-              <span className="storyboard-generator__progress-text">
-                  {generationStatus.currentShot} / {generationStatus.totalShots} shots
-              </span>
-          </div>
-      )}
     </div>
   );
 }

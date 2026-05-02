@@ -76,6 +76,16 @@ export function initializeDatabase(): void {
   })();
 
   console.log('✅ Database schema initialized');
+
+  // Ensure dev user exists for development
+  const devUserId = 'dev-user';
+  const existing = db.query('SELECT id FROM users WHERE id = $id').get({ $id: devUserId });
+  if (!existing) {
+    db.run(
+      "INSERT OR IGNORE INTO users (id, email, password_hash) VALUES ($id, 'dev@cutline.local', '')",
+      { $id: devUserId },
+    );
+  }
 }
 
 /**

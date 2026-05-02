@@ -71,7 +71,7 @@ export type TimeOfDay = (typeof TIME_OF_DAY)[number];
 export const STORYBOARD_STYLES = [
   'pencil-sketch',
   'ink-drawing',
-  'manga-comic',
+  'manga',
   'watercolor',
 ] as const;
 
@@ -83,7 +83,29 @@ export type StoryboardStyle = (typeof STORYBOARD_STYLES)[number];
 
 export const API_PROVIDERS = ['sdxl', 'wanxiang'] as const;
 
-export type ApiProvider = (typeof API_PROVIDERS)[number];
+export type ApiProvider = string;
+
+// ============================================================================
+// Settings — Provider Configuration
+// ============================================================================
+
+export type ClaudeModelTier = 'opus' | 'sonnet' | 'haiku';
+
+export interface ModelEntry {
+  id: string;
+  pricePerImage?: number; // $/image
+}
+
+export interface ProviderConfig {
+  id: string;
+  name: string;
+  enabled: boolean;
+  anthropicEndpoint: string;
+  openaiEndpoint: string;
+  apiKey?: string;
+  models: ModelEntry[];
+  claudeMapping: Partial<Record<ClaudeModelTier, string>>;
+}
 
 // ============================================================================
 // Entity Types
@@ -245,6 +267,7 @@ export interface StoryboardPanel {
   generatedAt: Date;
   generationParams: GenerationParams;
   apiProvider: ApiProvider;
+  model?: string;
   cost: number;
   style: StoryboardStyle;
   version: number;

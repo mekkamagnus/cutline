@@ -1,11 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Routes, Route, Navigate, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { SceneWorkspace, Header, FormatBar, LeftSidebar, RightPanel, BottomNav, MobileTopBar, MobileFormatBar, SceneSlidePanel } from '@/components/workspace';
 import { ScriptEditor } from '@/components/script';
 import { ShotListEditor } from '@/components/shot-list';
 import { StoryboardScreen } from '@/components/storyboard';
 import { useBreakpoint } from '@/hooks';
-import { useUIStore } from '@/stores';
+import { useUIStore, useSettingsStore } from '@/stores';
+import { SettingsPanel } from '@/components/settings';
 import { fountainParser } from '@/services/fountain-parser';
 import { generateShotsFromScene } from '@/services/shot-generator';
 import { Result } from '@/lib/fp';
@@ -13,12 +14,21 @@ import type { Scene, Shot } from '@/types';
 import type { MobileView } from '@/components/workspace';
 
 function App() {
+  const refreshApiKeyStatus = useSettingsStore((s) => s.refreshApiKeyStatus);
+
+  useEffect(() => {
+    refreshApiKeyStatus();
+  }, [refreshApiKeyStatus]);
+
   return (
-    <Routes>
-      <Route path="/" element={<ProjectListScreen />} />
-      <Route path="/project/:projectId/*" element={<ProjectWorkspace />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/" element={<ProjectListScreen />} />
+        <Route path="/project/:projectId/*" element={<ProjectWorkspace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      <SettingsPanel />
+    </>
   );
 }
 

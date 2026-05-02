@@ -14,6 +14,7 @@
 import { db } from '../db/connection.js';
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'crypto';
 import type { DBShot } from '../types/index.js';
+import { generateViaOpenAICompat, mockGenerate } from './openai-image.provider.js';
 
 // =============================================================================
 // Types
@@ -105,22 +106,13 @@ function decryptApiKey(encrypted: string): string {
 
 interface StoredApiKey {
   userId: string;
-  provider: AIProvider;
+  provider: string;
   encryptedKey: string;
   createdAt: string;
   updatedAt: string;
 }
 
-function getApiKeyTable(): StoredApiKey[] {
-  // In production, this would be a database table
-  // For now, we use an in-memory store with database persistence
-  const query = db.query(`
-    SELECT * FROM api_keys WHERE user_id = $userId AND provider = $provider
-  `);
-  return query.all() as StoredApiKey[];
-}
-
-function storeApiKey(userId: string, provider: AIProvider, apiKey: string): void {
+function storeApiKey(userId: string, provider: string, apiKey: string): void {
   const encryptedKey = encryptApiKey(apiKey);
   const now = new Date().toISOString();
 
@@ -141,7 +133,7 @@ function storeApiKey(userId: string, provider: AIProvider, apiKey: string): void
   });
 }
 
-function retrieveApiKey(userId: string, provider: AIProvider): string | null {
+function retrieveApiKey(userId: string, provider: string): string | null {
   const query = db.query(`
     SELECT encrypted_key FROM api_keys
     WHERE user_id = $userId AND provider = $provider
@@ -479,7 +471,7 @@ export class AIProxyService {
   /**
    * Store an API key for a user (encrypted)
    */
-  static storeApiKey(userId: string, provider: AIProvider, apiKey: string): ServiceResult<void> {
+  static storeApiKey(userId: string, provider: string, apiKey: string): ServiceResult<void> {
     if (!apiKey || apiKey.trim().length === 0) {
       return { success: false, error: 'API key is required' };
     }
@@ -496,14 +488,14 @@ export class AIProxyService {
   /**
    * Check if a user has an API key configured for a provider
    */
-  static hasApiKey(userId: string, provider: AIProvider): boolean {
+  static hasApiKey(userId: string, provider: string): boolean {
     return retrieveApiKey(userId, provider) !== null;
   }
 
   /**
    * Delete an API key for a user
    */
-  static deleteApiKey(userId: string, provider: AIProvider): ServiceResult<void> {
+  static deleteApiKey(userId: string, provider: string): ServiceResult<void> {
     const deleteQuery = db.query(`
       DELETE FROM api_keys
       WHERE user_id = $userId AND provider = $provider
@@ -511,6 +503,28 @@ export class AIProxyService {
 
     deleteQuery.run({ $userId: userId, $provider: provider });
     return { success: true };
+  }
+
+  /**
+   * Retrieve a stored API key for a provider (decrypted)
+   */
+  static getApiKey(userId: string, provider: string): string | null {
+    return retrieveApiKey(userId, provider);
+  }
+
+  /**
+   * List all provider IDs that have keys configured for a user
+   */
+  static listApiKeys(userId: string): Record<string, boolean> {
+    const query = db.query(`
+      SELECT provider FROM api_keys WHERE user_id = $userId
+    `);
+    const rows = query.all({ $userId: userId }) as Array<{ provider: string }>;
+    const result: Record<string, boolean> = {};
+    for (const row of rows) {
+      result[row.provider] = true;
+    }
+    return result;
   }
 
   // =========================================================================
@@ -527,6 +541,87 @@ export class AIProxyService {
     params: ImageGenerationParams
   ): Promise<ServiceResult<GeneratedImage>> {
     return this.generateImageInternal(userId, provider, params);
+  }
+
+  // =========================================================================
+  // Dynamic Provider Generation
+  // =========================================================================
+
+  /**
+   * Generate using a dynamically-configured provider (OpenAI-compatible).
+   * Looks up API key from server-side storage. Falls back to mock if no key.
+   */
+  static async generateDynamic(
+    endpoint: string,
+    apiKey: string | undefined,
+    model: string,
+    providerName: string,
+    providerId: string,
+    params: ImageGenerationParams,
+    costPerImage?: number,
+    userId?: string,
+  ): Promise<ServiceResult<GeneratedImage>> {
+    if (!params.prompt || params.prompt.trim().length === 0) {
+      return { success: false, error: 'Prompt is required' };
+    }
+
+    // Look up key from server storage if not provided directly
+    let resolvedKey = apiKey;
+    if (!resolvedKey && userId) {
+      resolvedKey = retrieveApiKey(userId, providerId) ?? undefined;
+    }
+
+    const useMock = !resolvedKey;
+
+    try {
+      if (useMock) {
+        const result = await mockGenerate(
+          { prompt: params.prompt, model, size: `${params.width ?? 1024}x${params.height ?? 576}` },
+          providerId,
+          costPerImage ?? 0.01,
+        );
+
+        return {
+          success: true,
+          data: {
+            id: result.id,
+            url: result.url,
+            provider: providerId,
+            generatedAt: new Date().toISOString(),
+            cost: result.cost,
+            params,
+          },
+        };
+      }
+
+      const result = await generateViaOpenAICompat(
+        endpoint,
+        resolvedKey!,
+        {
+          prompt: params.prompt,
+          model,
+          size: `${params.width ?? 1024}x${params.height ?? 576}`,
+          style: params.style,
+        },
+        costPerImage ?? 0.01,
+        providerId,
+      );
+
+      return {
+        success: true,
+        data: {
+          id: result.id,
+          url: result.url,
+          provider: providerId,
+          generatedAt: new Date().toISOString(),
+          cost: result.cost,
+          params,
+        },
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      return { success: false, error: `Image generation failed: ${message}` };
+    }
   }
 
   // =========================================================================

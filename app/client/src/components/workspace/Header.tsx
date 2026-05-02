@@ -4,6 +4,7 @@
  * Main application header with logo, navigation tabs, and actions.
  * Matches mockup.html design with three-panel layout.
  */
+import { useSettingsStore } from '@/stores';
 
 interface HeaderProps {
   viewMode?: 'script' | 'shots' | 'storyboards' | 'breakdown';
@@ -11,6 +12,7 @@ interface HeaderProps {
 }
 
 export function Header({ viewMode = 'script', onNavigate }: HeaderProps) {
+  const toggleSettings = useSettingsStore((s) => s.toggleSettings);
   const navTabs = [
     { id: 'script' as const, label: 'Script' },
     { id: 'shots' as const, label: 'Shots' },
@@ -46,6 +48,17 @@ export function Header({ viewMode = 'script', onNavigate }: HeaderProps) {
       {/* Right Side */}
       <div style={rightStyles}>
         <span style={versionBadgeStyles}>v1.0 Phase 1</span>
+        <button
+          type="button"
+          style={settingsButtonStyles}
+          onClick={toggleSettings}
+          title="Settings"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <circle cx="8" cy="8" r="2.5" />
+            <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41" />
+          </svg>
+        </button>
         <button
           type="button"
           style={exportButtonStyles}
@@ -129,6 +142,19 @@ const versionBadgeStyles: React.CSSProperties = {
   padding: 'var(--space-1) var(--space-2)',
   background: 'var(--bg-tertiary)',
   borderRadius: 'var(--radius-sm)',
+};
+
+const settingsButtonStyles: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 'var(--space-2)',
+  background: 'var(--bg-tertiary)',
+  color: 'var(--text-secondary)',
+  border: '1px solid var(--border-color)',
+  borderRadius: 'var(--radius-md)',
+  cursor: 'pointer',
+  transition: 'all var(--transition-fast)',
 };
 
 const exportButtonStyles: React.CSSProperties = {

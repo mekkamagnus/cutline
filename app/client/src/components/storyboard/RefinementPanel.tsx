@@ -4,9 +4,10 @@
  * Panel for editing prompts and regenerating individual storyboard panels.
  * Allows users to refine AI-generated storyboards with targeted adjustments.
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useUpdateStoryboard, useAddStoryboardVersion } from '@/hooks';
 import { api, type GenerateSingleResponse } from '@/lib/api-client';
+import { useSettingsStore, type AvailableModel } from '@/stores/settings-store';
 import type { StoryboardPanel, StoryboardData, StoryboardStyle } from '@/types';
 
 interface RefinementPanelProps {
@@ -18,37 +19,74 @@ interface RefinementPanelProps {
 const STYLE_OPTIONS: { value: StoryboardStyle; label: string }[] = [
   { value: 'pencil-sketch', label: 'Pencil Sketch' },
   { value: 'ink-drawing', label: 'Ink Drawing' },
-  { value: 'manga-comic', label: 'Manga/Comic' },
+  { value: 'manga', label: 'Manga/Comic' },
   { value: 'watercolor', label: 'Watercolor' },
 ];
 
-const PROVIDER_OPTIONS: { value: 'sdxl' | 'wanxiang'; label: string; cost: string }[] = [
-  { value: 'sdxl', label: 'SDXL (Replicate)', cost: '$0.002/image' },
-  { value: 'wanxiang', label: 'WanXiang (Alibaba)', cost: '$0.028/image' },
-];
+const DEFAULT_PROVIDER_ID = 'google';
+const DEFAULT_MODEL_ID = 'gemini-3.1-flash';
 
 export function RefinementPanel({ storyboard, onClose, onRefined }: RefinementPanelProps) {
   const [refinementPrompt, setRefinementPrompt] = useState(storyboard.refinementPrompt || '');
   const [selectedStyle, setSelectedStyle] = useState<StoryboardStyle>(storyboard.style || 'pencil-sketch');
-  const [selectedProvider, setSelectedProvider] = useState<'sdxl' | 'wanxiang'>(
-    (storyboard.apiProvider as 'sdxl' | 'wanxiang') || 'sdxl'
-  );
+  const [selectedProviderId, setSelectedProviderId] = useState(DEFAULT_PROVIDER_ID);
+  const [selectedModelId, setSelectedModelId] = useState(DEFAULT_MODEL_ID);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const updateStoryboard = useUpdateStoryboard();
   const addVersion = useAddStoryboardVersion();
+  const { getAvailableModels, providers } = useSettingsStore();
+
+  const availableModels = useMemo(() => getAvailableModels(), [providers]);
+
+  const enabledProviders = useMemo(() => {
+    const seen = new Set<string>();
+    return availableModels.filter((m) => {
+      if (seen.has(m.providerId)) return false;
+      seen.add(m.providerId);
+      return true;
+    }).map((m) => ({ id: m.providerId, name: m.providerName }));
+  }, [availableModels]);
+
+  const providerModels = useMemo(
+    () => availableModels.filter((m) => m.providerId === selectedProviderId),
+    [availableModels, selectedProviderId],
+  );
+
+  const selectedModel = useMemo<AvailableModel | undefined>(() => {
+    const found = availableModels.find((m) => m.providerId === selectedProviderId && m.modelId === selectedModelId);
+    if (found) return found;
+    return providerModels[0];
+  }, [availableModels, selectedProviderId, selectedModelId, providerModels]);
+
+  const handleProviderChange = useCallback((newProviderId: string) => {
+    setSelectedProviderId(newProviderId);
+    const firstModel = availableModels.find((m) => m.providerId === newProviderId);
+    setSelectedModelId(firstModel?.modelId ?? '');
+  }, [availableModels]);
+
+  const costPerImage = selectedModel?.pricePerImage ?? 0.01;
 
   const handleRefine = useCallback(async () => {
+    if (!selectedModel) {
+      setError('No model selected. Choose a provider and model first.');
+      return;
+    }
+
     setIsGenerating(true);
     setError(null);
 
     try {
-      // Call backend API to generate refined image
-      const response = await api.post<GenerateSingleResponse>('/api/ai/generate/single', {
+      const response = await api.post<GenerateSingleResponse>('/api/ai/generate/dynamic/single', {
         shotId: storyboard.shotId,
+        prompt: storyboard.generationParams?.prompt || refinementPrompt || '',
         style: selectedStyle,
-        provider: selectedProvider,
+        providerId: selectedModel.providerId,
+        providerName: selectedModel.providerName,
+        model: selectedModel.modelId,
+        endpoint: selectedModel.openaiEndpoint,
+        costPerImage: selectedModel.pricePerImage,
         refinementPrompt,
       });
 
@@ -56,7 +94,6 @@ export function RefinementPanel({ storyboard, onClose, onRefined }: RefinementPa
         throw new Error(response.error || 'Failed to generate refined storyboard');
       }
 
-      // Add new version to storyboard
       const newData: StoryboardData = {
         imageUrl: response.data.imageUrl,
         generationParams: {
@@ -81,12 +118,11 @@ export function RefinementPanel({ storyboard, onClose, onRefined }: RefinementPa
 
       onClose();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to refine storyboard';
-      setError(message);
+      setError(err instanceof Error ? err.message : 'Failed to refine storyboard');
     } finally {
       setIsGenerating(false);
     }
-  }, [refinementPrompt, selectedStyle, selectedProvider, storyboard, addVersion, onRefined, onClose]);
+  }, [refinementPrompt, selectedStyle, selectedModel, storyboard, addVersion, onRefined, onClose]);
 
   const handleUpdatePrompt = useCallback(async () => {
     try {
@@ -98,8 +134,7 @@ export function RefinementPanel({ storyboard, onClose, onRefined }: RefinementPa
       });
       onClose();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update prompt';
-      setError(message);
+      setError(err instanceof Error ? err.message : 'Failed to update prompt');
     }
   }, [refinementPrompt, storyboard.id, updateStoryboard, onClose]);
 
@@ -114,7 +149,7 @@ export function RefinementPanel({ storyboard, onClose, onRefined }: RefinementPa
           onClick={onClose}
           aria-label="Close"
         >
-          ×
+          x
         </button>
       </div>
 
@@ -172,18 +207,39 @@ export function RefinementPanel({ storyboard, onClose, onRefined }: RefinementPa
       {/* Provider Selector */}
       <div className="refinement-panel__field">
         <label className="refinement-panel__label" htmlFor="provider-select">
-          AI Provider
+          Provider
         </label>
         <select
           id="provider-select"
           className="refinement-panel__select"
-          value={selectedProvider}
-          onChange={(e) => setSelectedProvider(e.target.value as 'sdxl' | 'wanxiang')}
+          value={selectedProviderId}
+          onChange={(e) => handleProviderChange(e.target.value)}
           disabled={isGenerating}
         >
-          {PROVIDER_OPTIONS.map((provider) => (
-            <option key={provider.value} value={provider.value}>
-              {provider.label} - {provider.cost}
+          {enabledProviders.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Model Selector */}
+      <div className="refinement-panel__field">
+        <label className="refinement-panel__label" htmlFor="model-select">
+          Model
+        </label>
+        <select
+          id="model-select"
+          className="refinement-panel__select"
+          value={selectedModel?.modelId ?? ''}
+          onChange={(e) => setSelectedModelId(e.target.value)}
+          disabled={isGenerating}
+        >
+          {providerModels.map((m) => (
+            <option key={m.modelId} value={m.modelId}>
+              {m.modelId}
+              {m.pricePerImage != null ? ` ($${m.pricePerImage}/img)` : ''}
             </option>
           ))}
         </select>
@@ -192,13 +248,13 @@ export function RefinementPanel({ storyboard, onClose, onRefined }: RefinementPa
       {/* Error Display */}
       {error && (
         <div className="refinement-panel__error">
-          ⚠️ {error}
+          {error}
         </div>
       )}
 
       {/* Cost Estimate */}
       <div className="refinement-panel__cost">
-        Estimated cost: {selectedProvider === 'sdxl' ? '$0.002' : '$0.028'}
+        Estimated cost: ${costPerImage.toFixed(3)}/image
       </div>
 
       {/* Actions */}
@@ -217,14 +273,7 @@ export function RefinementPanel({ storyboard, onClose, onRefined }: RefinementPa
           onClick={handleRefine}
           disabled={isGenerating || !refinementPrompt.trim()}
         >
-          {isGenerating ? (
-            <>
-              <span className="refinement-panel__spinner">⏳</span>
-              Generating...
-            </>
-          ) : (
-            'Generate Refinement'
-          )}
+          {isGenerating ? 'Generating...' : 'Generate Refinement'}
         </button>
       </div>
     </div>

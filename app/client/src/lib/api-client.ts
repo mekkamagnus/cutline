@@ -103,6 +103,7 @@ export interface GenerateStoryboardsResponse {
     imageUrl: string;
     cost: number;
     provider: string;
+    model?: string;
   }>;
 }
 
@@ -112,6 +113,7 @@ export interface GenerateSingleResponse {
   imageUrl: string;
   cost: number;
   provider: string;
+  model?: string;
 }
 
 export interface ApiKeysResponse {
