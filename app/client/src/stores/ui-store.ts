@@ -10,6 +10,14 @@ import type { ViewMode } from '@/types';
 
 export type MobileView = 'script' | 'shots' | 'storyboards' | 'breakdown';
 
+export type MobileSubView =
+  | 'characters'
+  | 'notes'
+  | 'settings'
+  | 'scene-cards'
+  | 'ai-suggestions'
+  | null;
+
 interface UIState {
   // Selection state
   currentProjectId: string | null;
@@ -27,6 +35,7 @@ interface UIState {
   slidePanelOpen: boolean;
   quickFormatOpen: boolean;
   mobileView: MobileView;
+  mobileSubView: MobileSubView;
 
   // Paradigm tracking - CRITICAL for shot-list-first workflow
   hasUnconfirmedChanges: boolean;
@@ -48,6 +57,7 @@ interface UIState {
   setSlidePanelOpen: (open: boolean) => void;
   setQuickFormatOpen: (open: boolean) => void;
   setMobileView: (view: MobileView) => void;
+  setMobileSubView: (view: MobileSubView) => void;
 
   // Actions - Paradigm
   setHasUnconfirmedChanges: (value: boolean) => void;
@@ -67,6 +77,7 @@ const initialState = {
   slidePanelOpen: false,
   quickFormatOpen: false,
   mobileView: 'script' as MobileView,
+  mobileSubView: null as MobileSubView,
 };
 
 export const useUIStore = create<UIState>()(
@@ -129,6 +140,8 @@ export const useUIStore = create<UIState>()(
       setQuickFormatOpen: (open: boolean) => set({ quickFormatOpen: open }),
 
       setMobileView: (view: MobileView) => set({ mobileView: view }),
+
+      setMobileSubView: (view: MobileSubView) => set({ mobileSubView: view }),
 
       // Paradigm actions
       setHasUnconfirmedChanges: (value) => set({ hasUnconfirmedChanges: value }),

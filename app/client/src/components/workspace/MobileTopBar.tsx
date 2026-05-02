@@ -1,9 +1,3 @@
-/**
- * MobileTopBar Component
- *
- * Compact mobile header with hamburger, title, and view toggle.
- * Replaces desktop Header on mobile viewports.
- */
 import { useUIStore } from '@/stores';
 
 interface MobileTopBarProps {
@@ -12,6 +6,9 @@ interface MobileTopBarProps {
   totalScenes?: number;
   onPrevScene?: () => void;
   onNextScene?: () => void;
+  variant?: 'main' | 'sub';
+  onBack?: () => void;
+  rightAction?: React.ReactNode;
 }
 
 export function MobileTopBar({
@@ -20,8 +17,31 @@ export function MobileTopBar({
   totalScenes = 1,
   onPrevScene,
   onNextScene,
+  variant = 'main',
+  onBack,
+  rightAction,
 }: MobileTopBarProps) {
   const toggleSlidePanel = useUIStore((s) => s.toggleSlidePanel);
+  const setMobileSubView = useUIStore((s) => s.setMobileSubView);
+
+  if (variant === 'sub') {
+    return (
+      <div className="mobile-sub-top-bar">
+        <button
+          type="button"
+          className="mobile-sub-top-bar__btn"
+          onClick={onBack ?? (() => setMobileSubView(null))}
+          aria-label="Go back"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <span className="mobile-sub-top-bar__title">{title}</span>
+        {rightAction ?? <div style={{ width: 44 }} />}
+      </div>
+    );
+  }
 
   return (
     <>
@@ -56,7 +76,6 @@ export function MobileTopBar({
         </div>
       </div>
 
-      {/* Scene Navigation Bar */}
       <div className="scene-nav-bar">
         <button
           type="button"

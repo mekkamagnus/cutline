@@ -1,9 +1,19 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Routes, Route, Navigate, useParams, useLocation, useNavigate } from 'react-router-dom';
-import { SceneWorkspace, Header, FormatBar, LeftSidebar, RightPanel, BottomNav, MobileTopBar, MobileFormatBar, SceneSlidePanel } from '@/components/workspace';
+import { Header, FormatBar, LeftSidebar, RightPanel, BottomNav, MobileTopBar, MobileFormatBar, SceneSlidePanel } from '@/components/workspace';
 import { ScriptEditor } from '@/components/script';
 import { ShotListEditor } from '@/components/shot-list';
 import { StoryboardScreen } from '@/components/storyboard';
+import { MobileShell } from '@/components/mobile/MobileShell';
+import { MobileBreakdownScreen } from '@/components/mobile/MobileBreakdownScreen';
+import { MobileShotCards } from '@/components/mobile/MobileShotCards';
+import { MobileStoryboardView } from '@/components/mobile/MobileStoryboardView';
+import { MobileCharacterPanel } from '@/components/mobile/MobileCharacterPanel';
+import { MobileSceneCards } from '@/components/mobile/MobileSceneCards';
+import { MobileNotesScreen } from '@/components/mobile/MobileNotesScreen';
+import { MobileSettingsScreen } from '@/components/mobile/MobileSettingsScreen';
+import { MobileProjectList } from '@/components/mobile/MobileProjectList';
+import { MobileAISuggestions } from '@/components/mobile/MobileAISuggestions';
 import { useBreakpoint } from '@/hooks';
 import { useUIStore, useSettingsStore } from '@/stores';
 import { SettingsPanel } from '@/components/settings';
@@ -12,6 +22,7 @@ import { generateShotsFromScene } from '@/services/shot-generator';
 import { Result } from '@/lib/fp';
 import type { Scene, Shot } from '@/types';
 import type { MobileView } from '@/components/workspace';
+import type { MobileSubView } from '@/stores/ui-store';
 
 function App() {
   const refreshApiKeyStatus = useSettingsStore((s) => s.refreshApiKeyStatus);
@@ -35,6 +46,28 @@ function App() {
 function ProjectListScreen() {
   const { isMobile } = useBreakpoint();
 
+  if (isMobile) {
+    return (
+      <MobileShell
+        topBar={
+          <div className="mobile-sub-top-bar">
+            <div style={{ width: 44 }} />
+            <span className="mobile-sub-top-bar__title">My Projects</span>
+            <button type="button" className="mobile-sub-top-bar__action" aria-label="More options">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="12" cy="5" r="1.5" />
+                <circle cx="12" cy="12" r="1.5" />
+                <circle cx="12" cy="19" r="1.5" />
+              </svg>
+            </button>
+          </div>
+        }
+      >
+        <MobileProjectList />
+      </MobileShell>
+    );
+  }
+
   return (
     <div
       style={{
@@ -43,13 +76,13 @@ function ProjectListScreen() {
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '100vh',
-        padding: isMobile ? 'var(--space-4)' : 'var(--space-8)',
+        padding: 'var(--space-8)',
         textAlign: 'center',
       }}
     >
       <h1
         style={{
-          fontSize: isMobile ? 'var(--font-size-2xl)' : 'var(--font-size-3xl)',
+          fontSize: 'var(--font-size-3xl)',
           fontWeight: 'var(--font-weight-bold)',
           marginBottom: 'var(--space-4)',
         }}
@@ -58,10 +91,9 @@ function ProjectListScreen() {
       </h1>
       <p
         style={{
-          fontSize: isMobile ? 'var(--font-size-base)' : 'var(--font-size-lg)',
+          fontSize: 'var(--font-size-lg)',
           color: 'var(--text-secondary)',
           marginBottom: 'var(--space-8)',
-          padding: isMobile ? '0 var(--space-4)' : undefined,
         }}
       >
         Script to video platform for filmmakers
@@ -78,13 +110,12 @@ function ProjectListScreen() {
       <a
         href="/project/demo-project/script"
         style={{
-          padding: isMobile ? 'var(--space-4) var(--space-6)' : 'var(--space-3) var(--space-6)',
+          padding: 'var(--space-3) var(--space-6)',
           backgroundColor: 'var(--accent)',
           color: 'white',
           borderRadius: 'var(--radius-md)',
           textDecoration: 'none',
-          fontSize: isMobile ? 'var(--font-size-base)' : 'var(--font-size-sm)',
-          minHeight: isMobile ? '44px' : undefined,
+          fontSize: 'var(--font-size-sm)',
           display: 'inline-flex',
           alignItems: 'center',
         }}
@@ -240,8 +271,9 @@ They face each other. Neither speaks for a long moment.
 JANE looks at his hand. Takes it. They walk together toward the sunrise.
 
 CUT TO BLACK.`);
-  const [isDirty, setIsDirty] = useState(false);
   const { isMobile } = useBreakpoint();
+  const mobileSubView = useUIStore((s) => s.mobileSubView);
+  const focusMode = useUIStore((s) => s.focusMode);
 
   const parsedScenes = useMemo<Scene[]>(() => {
     const result = fountainParser.parse(content);
@@ -274,7 +306,6 @@ CUT TO BLACK.`);
 
   const handleSave = (newContent: string) => {
     setContent(newContent);
-    setIsDirty(false);
   };
 
   const handleFormat = (type: string) => {
@@ -325,108 +356,142 @@ CUT TO BLACK.`);
     }
   };
 
-  return (
-    <div className={`workspace-layout ${isMobile ? 'workspace-layout--mobile' : 'workspace-layout--desktop'}`}>
-      {/* Header - desktop only */}
-      {!isMobile && (
-        <Header
-          viewMode={viewMode}
-          onNavigate={handleNavigate}
+  // Render mobile sub-screen overlay
+  const renderMobileSubScreen = () => {
+    const subScreenConfig: Record<Exclude<MobileSubView, null>, { title: string; component: React.ReactNode }> = {
+      characters: { title: 'Characters', component: <MobileCharacterPanel /> },
+      notes: { title: 'Notes', component: <MobileNotesScreen /> },
+      settings: { title: 'Settings', component: <MobileSettingsScreen /> },
+      'scene-cards': { title: 'Scene Cards', component: <MobileSceneCards scenes={parsedScenes} /> },
+      'ai-suggestions': { title: 'AI Suggestions', component: <MobileAISuggestions /> },
+    };
+
+    const config = mobileSubView ? subScreenConfig[mobileSubView] : null;
+    if (!config) return null;
+
+    return (
+      <div className="mobile-sub-screen">
+        <MobileTopBar variant="sub" title={config.title} />
+        <div className="mobile-shell__content">{config.component}</div>
+      </div>
+    );
+  };
+
+  // ==================== MOBILE LAYOUT ====================
+  if (isMobile) {
+    const currentScene = parsedScenes.findIndex((s) => s.id === currentSceneId) + 1 || 1;
+    const totalScenes = parsedScenes.length;
+    const currentSceneData = parsedScenes.find((s) => s.id === currentSceneId);
+
+    return (
+      <div className={`workspace-layout workspace-layout--mobile ${focusMode ? 'focus-mode' : ''}`}>
+        {/* Slide Panel */}
+        <SceneSlidePanel
+          scriptId={projectId ?? ''}
+          currentSceneId={currentSceneId}
+          onSceneSelect={() => {}}
         />
-      )}
 
-      {/* Main Three-Panel Grid - desktop only */}
-      {!isMobile ? (
-        <div style={editorContainerStyles}>
-          {/* Left Sidebar */}
-          <LeftSidebar
-            projectId={projectId}
-            currentSceneId={currentSceneId}
-            scenes={parsedScenes}
-            onSceneSelect={(id) => {
-              setSelectedSceneId(id);
-            }}
-          />
+        {/* Sub-screen overlay */}
+        {mobileSubView && renderMobileSubScreen()}
 
-          {/* Main Content */}
-          <div style={mainContentStyles}>
-            {/* Editor Area - NOW switches based on viewMode */}
-            <div style={editorAreaStyles}>
-              {renderContent()}
-            </div>
-          </div>
+        {/* Mobile Top Bar */}
+        <MobileTopBar
+          title="The Last Train"
+          currentScene={currentScene}
+          totalScenes={totalScenes}
+        />
 
-          {/* Right Sidebar */}
-          <RightPanel
-            selectedShot={null}
-            selectedStoryboard={null}
-            currentScene={null}
-            sceneId=""
-          />
-        </div>
-      ) : (
-        /* Mobile single-column layout */
-        <>
-          {/* Mobile Top Bar */}
-          <MobileTopBar
-            title="The Last Train"
-            currentScene={1}
-            totalScenes={12}
-          />
-
-          {/* Main Content - NOW switches based on viewMode */}
-          <div className="mobile-content">
-            {viewMode === 'script' && (
-              <div className="mobile-script-page">
-                <ScriptEditor
-                  initialContent={content}
-                  onChange={setContent}
-                  onSave={handleSave}
-                />
-              </div>
-            )}
-            {viewMode === 'shots' && (
-              <div style={{ padding: 'var(--space-4)' }}>
-                <ShotListEditor
-                  sceneId="demo-scene"
-                  selectedShotId={selectedShotId ?? undefined}
-                  onShotSelect={(shot) => setSelectedShotId(shot.id)}
-                  initialShots={generatedShots}
-                />
-              </div>
-            )}
-            {viewMode === 'storyboards' && (
-              <div style={{ padding: 'var(--space-4)' }}>
-                <StoryboardScreen
-                  sceneId={currentSceneId ?? 'demo-scene'}
-                  initialShots={generatedShots}
-                />
-              </div>
-            )}
-            {viewMode === 'breakdown' && <ScriptBreakdownScreen />}
-          </div>
-
-          {/* Mobile Format Bar - only show for script view */}
+        {/* Main Content */}
+        <div className="mobile-content">
           {viewMode === 'script' && (
-            <MobileFormatBar
-              onFormat={handleFormat}
+            <div className="mobile-script-page">
+              <ScriptEditor
+                initialContent={content}
+                onChange={setContent}
+                onSave={handleSave}
+              />
+            </div>
+          )}
+          {viewMode === 'shots' && (
+            <MobileShotCards
+              shots={generatedShots}
+              sceneHeading={currentSceneData?.heading ?? ''}
+              sceneNumber={currentScene}
+              onShotSelect={(shot) => setSelectedShotId(shot.id)}
             />
           )}
+          {viewMode === 'storyboards' && (
+            <MobileStoryboardView
+              shots={generatedShots}
+              sceneHeading={currentSceneData?.heading ?? ''}
+              sceneNumber={currentScene}
+            />
+          )}
+          {viewMode === 'breakdown' && (
+            <MobileBreakdownScreen scenes={parsedScenes} />
+          )}
+        </div>
 
-          {/* Bottom Navigation */}
+        {/* Mobile Format Bar - only show for script view */}
+        {viewMode === 'script' && !focusMode && (
+          <MobileFormatBar onFormat={handleFormat} />
+        )}
+
+        {/* Focus Mode Bottom Bar */}
+        {focusMode && (
+          <div className="focus-mode-bar">
+            <button type="button" className="focus-mode-bar__btn">Scene ↑</button>
+            <button type="button" className="focus-mode-bar__btn">Scene ↓</button>
+            <button
+              type="button"
+              className="focus-mode-bar__btn focus-mode-bar__btn--exit"
+              onClick={() => useUIStore.getState().toggleFocusMode()}
+            >
+              Exit Focus
+            </button>
+          </div>
+        )}
+
+        {/* Bottom Navigation */}
+        {!focusMode && (
           <BottomNav
             activeView={viewMode as MobileView}
             onViewChange={(v) => navigate(`/project/${projectId}/${v}`)}
           />
-        </>
-      )}
+        )}
+      </div>
+    );
+  }
 
-      {/* Format Bar - desktop only */}
-      {!isMobile && (
-        <FormatBar
-          onFormat={handleFormat}
+  // ==================== DESKTOP LAYOUT ====================
+  return (
+    <div className={`workspace-layout ${'workspace-layout--desktop'}`}>
+      <Header viewMode={viewMode} onNavigate={handleNavigate} />
+
+      <div style={editorContainerStyles}>
+        <LeftSidebar
+          projectId={projectId ?? ''}
+          currentSceneId={currentSceneId}
+          scenes={parsedScenes}
+          onSceneSelect={(id) => setSelectedSceneId(id)}
         />
-      )}
+
+        <div style={mainContentStyles}>
+          <div style={editorAreaStyles}>
+            {renderContent()}
+          </div>
+        </div>
+
+        <RightPanel
+          selectedShot={null}
+          selectedStoryboard={null}
+          currentScene={null}
+          sceneId=""
+        />
+      </div>
+
+      <FormatBar onFormat={handleFormat} />
     </div>
   );
 }
@@ -439,15 +504,7 @@ function ScriptBreakdownScreen() {
   );
 }
 
-function SettingsScreen() {
-  return (
-    <div style={{ padding: 'var(--space-4)' }}>
-      Settings - Coming Soon
-    </div>
-  );
-}
-
-// Styles for ProjectWorkspace desktop
+// Desktop-only styles
 const editorContainerStyles: React.CSSProperties = {
   display: 'grid',
   gridTemplateColumns: '240px 1fr 200px',
