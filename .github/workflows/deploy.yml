@@ -51,7 +51,7 @@ jobs:
             # Install and build frontend
             cd app/client
             sudo npm ci
-            sudo npm run build
+            sudo VITE_API_URL=/api npm run build
 
             # Install backend dependencies
             cd ../server
