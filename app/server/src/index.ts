@@ -16,8 +16,23 @@ import { isDatabaseHealthy } from './db/connection.js';
 
 import { authMiddleware } from './middleware/auth.js';
 
+const PORT = Number(process.env.PORT || 3011);
+const allowedOrigins = [
+  'http://localhost:5175',
+  'http://127.0.0.1:5175',
+  ...(process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim()) : []),
+];
+
 const app = new Elysia()
-  .use(cors())
+  .use(cors({
+    origin: (request) => {
+      const origin = request.headers.get('origin');
+      return !origin || allowedOrigins.includes(origin);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  }))
   .use(swagger({
     documentation: {
       info: {
@@ -58,7 +73,7 @@ const app = new Elysia()
       message: error instanceof Error ? error.message : 'Unknown error',
     };
   })
-  .listen(process.env.PORT || 3001, ({ port }) => {
+  .listen(PORT, ({ port }) => {
     console.log(`🚀 Cutline API server running on http://localhost:${port}`);
   });
 

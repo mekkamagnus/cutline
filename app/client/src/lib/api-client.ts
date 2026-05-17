@@ -5,7 +5,7 @@
  * Handles authentication tokens and error responses.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3011';
 
 interface ApiOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -48,18 +48,31 @@ class ApiClient {
         credentials: 'include',
       });
 
-      const data = await response.json();
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : undefined;
 
       if (!response.ok) {
         return {
           success: false,
-          error: data.message || data.error || `HTTP ${response.status}`,
+          error: data?.message || data?.error || `HTTP ${response.status}`,
+        };
+      }
+
+      if (
+        data
+        && typeof data === 'object'
+        && 'success' in data
+        && data.success === false
+      ) {
+        return {
+          success: false,
+          error: typeof data.error === 'string' ? data.error : 'Request failed',
         };
       }
 
       return {
         success: true,
-        data,
+        data: data as T,
       };
     } catch (error) {
       return {

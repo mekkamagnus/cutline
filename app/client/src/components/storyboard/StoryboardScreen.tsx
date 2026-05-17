@@ -12,14 +12,15 @@ interface StoryboardScreenProps {
   initialShots?: Shot[];
 }
 
-const DEFAULT_PROVIDER_ID = 'google';
-const DEFAULT_MODEL_ID = 'gemini-3.1-flash';
+const DEFAULT_PROVIDER_ID = 'openai';
+const DEFAULT_MODEL_ID = 'gpt-image-1';
 
 export function StoryboardScreen({ sceneId, initialShots }: StoryboardScreenProps) {
   const [selectedStoryboard, setSelectedStoryboard] = useState<StoryboardPanel | null>(null);
   const [storyboardMap, setStoryboardMap] = useState<Map<string, StoryboardPanel>>(new Map());
   const [generatingShotId, setGeneratingShotId] = useState<string | null>(null);
   const [cardError, setCardError] = useState<string | null>(null);
+  const [selectedStyle, setSelectedStyle] = useState('manga');
   const hasSeeded = useRef(false);
 
   const { data: shots = [], isLoading } = useShots(sceneId);
@@ -75,11 +76,11 @@ export function StoryboardScreen({ sceneId, initialShots }: StoryboardScreenProp
     setCardError(null);
 
     try {
-      const prompt = buildShotPrompt(shot, 'manga');
-      const response = await api.post<{ success: boolean; id: string; shotId: string; imageUrl: string; cost: number; provider: string; model: string }>('/api/ai/generate/dynamic/single', {
+      const prompt = buildShotPrompt(shot, selectedStyle);
+      const response = await api.post<{ success: boolean; id: string; shotId: string; imageUrl?: string; cost?: number; provider: string; model: string }>('/api/ai/generate/dynamic/single', {
         shotId: shot.id,
         prompt,
-        style: 'manga',
+        style: selectedStyle,
         providerId: model.providerId,
         providerName: model.providerName,
         model: model.modelId,
@@ -91,6 +92,10 @@ export function StoryboardScreen({ sceneId, initialShots }: StoryboardScreenProp
         throw new Error(response.error || 'Generation failed');
       }
 
+      if (!response.data.imageUrl) {
+        throw new Error('Generation completed without an image URL');
+      }
+
       const panel: StoryboardPanel = {
         id: response.data.id,
         shotId: shot.id,
@@ -99,8 +104,8 @@ export function StoryboardScreen({ sceneId, initialShots }: StoryboardScreenProp
         generationParams: { prompt, width: 1024, height: 576 },
         apiProvider: response.data.provider,
         model: response.data.model,
-        cost: response.data.cost,
-        style: 'manga',
+        cost: response.data.cost ?? 0,
+        style: selectedStyle,
         version: 1,
         previousVersions: [],
       };
@@ -115,7 +120,7 @@ export function StoryboardScreen({ sceneId, initialShots }: StoryboardScreenProp
     } finally {
       setGeneratingShotId(null);
     }
-  }, [generatingShotId, getDefaultModel]);
+  }, [generatingShotId, getDefaultModel, selectedStyle]);
 
   const handleRefinementClose = useCallback(() => {
     setSelectedStoryboard(null);
@@ -130,8 +135,16 @@ export function StoryboardScreen({ sceneId, initialShots }: StoryboardScreenProp
     setSelectedStoryboard(null);
   }, []);
 
-  const handleGenerationComplete = useCallback(() => {
-    // useGenerateStoryboards hook invalidates caches; queries refetch automatically
+  const handleGenerationComplete = useCallback((panels: StoryboardPanel[] = []) => {
+    if (panels.length === 0) return;
+
+    setStoryboardMap((prev) => {
+      const next = new Map(prev);
+      for (const panel of panels) {
+        next.set(panel.shotId, panel);
+      }
+      return next;
+    });
   }, []);
 
   useEffect(() => {
@@ -168,7 +181,7 @@ export function StoryboardScreen({ sceneId, initialShots }: StoryboardScreenProp
     );
   }
 
-  const totalCost = storyboards.reduce((sum, sb) => sum + sb.cost, 0);
+  const totalCost = storyboards.reduce((sum, sb) => sum + (Number.isFinite(sb.cost) ? sb.cost : 0), 0);
 
   return (
     <div className="storyboard-screen">
@@ -281,6 +294,8 @@ export function StoryboardScreen({ sceneId, initialShots }: StoryboardScreenProp
         <div className="storyboard-screen__generator-section">
           <StoryboardGenerator
             sceneId={sceneId}
+            selectedStyle={selectedStyle}
+            onStyleChange={setSelectedStyle}
             onGenerationComplete={handleGenerationComplete}
           />
         </div>

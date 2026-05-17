@@ -25,6 +25,7 @@ const DEFAULT_PROVIDERS: ProviderConfig[] = [
     openaiEndpoint: 'https://api.openai.com/v1',
     apiKey: '',
     models: [
+      { id: 'gpt-image-1', pricePerImage: 0.011 },
       { id: 'gpt-image-2', pricePerImage: 0.04 },
       { id: 'dall-e-3', pricePerImage: 0.04 },
     ],
@@ -35,11 +36,13 @@ const DEFAULT_PROVIDERS: ProviderConfig[] = [
     name: 'Google',
     enabled: true,
     anthropicEndpoint: '',
-    openaiEndpoint: 'https://generativelanguage.googleapis.com/v1beta/openai',
+    openaiEndpoint: 'https://generativelanguage.googleapis.com/v1beta',
     apiKey: '',
     models: [
+      { id: 'gemini-2.5-flash-image', pricePerImage: 0.02 },
+      { id: 'gemini-3-pro-image-preview', pricePerImage: 0.04 },
+      { id: 'gemini-3.1-flash-image-preview', pricePerImage: 0.02 },
       { id: 'imagen-4', pricePerImage: 0.04 },
-      { id: 'gemini-3.1-flash', pricePerImage: 0.01 },
     ],
     claudeMapping: {},
   },

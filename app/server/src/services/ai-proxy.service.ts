@@ -14,7 +14,8 @@
 import { db } from '../db/connection.js';
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'crypto';
 import type { DBShot } from '../types/index.js';
-import { generateViaOpenAICompat, mockGenerate } from './openai-image.provider.js';
+import { generateViaOpenAICompat } from './openai-image.provider.js';
+import { generateViaGoogleAI } from './google-image.provider.js';
 
 // =============================================================================
 // Types
@@ -151,46 +152,6 @@ function retrieveApiKey(userId: string, provider: string): string | null {
     console.error('Failed to decrypt API key for user:', userId);
     return null;
   }
-}
-
-// =============================================================================
-// Mock Provider Implementations
-// =============================================================================
-
-/**
- * Mock SDXL Provider
- * Returns placeholder images for development
- */
-async function mockSdxlGenerate(params: ImageGenerationParams): Promise<GeneratedImage> {
-  // Simulate API latency
-  await new Promise(resolve => setTimeout(resolve, 500));
-
-  return {
-    id: `mock-sdxl-${Date.now()}`,
-    url: `https://picsum.photos/seed/${params.seed || Date.now()}/${params.width || 1024}/${params.height || 1024}`,
-    provider: 'sdxl',
-    generatedAt: new Date().toISOString(),
-    cost: 0.02, // Mock cost per image
-    params,
-  };
-}
-
-/**
- * Mock WanXiang Provider
- * Returns placeholder images for development
- */
-async function mockWanxiangGenerate(params: ImageGenerationParams): Promise<GeneratedImage> {
-  // Simulate API latency
-  await new Promise(resolve => setTimeout(resolve, 700));
-
-  return {
-    id: `mock-wanxiang-${Date.now()}`,
-    url: `https://picsum.photos/seed/${params.seed || Date.now()}/${params.width || 1024}/${params.height || 1024}`,
-    provider: 'wanxiang',
-    generatedAt: new Date().toISOString(),
-    cost: 0.015, // Mock cost per image
-    params,
-  };
 }
 
 // =============================================================================
@@ -571,50 +532,54 @@ export class AIProxyService {
       resolvedKey = retrieveApiKey(userId, providerId) ?? undefined;
     }
 
-    const useMock = !resolvedKey;
+    if (!resolvedKey) {
+      return {
+        success: false,
+        error: `No API key configured for ${providerName}. Go to Settings to add your API key.`,
+      };
+    }
 
     try {
-      if (useMock) {
-        const result = await mockGenerate(
-          { prompt: params.prompt, model, size: `${params.width ?? 1024}x${params.height ?? 576}` },
-          providerId,
-          costPerImage ?? 0.01,
-        );
+      let resultUrl: string;
+      let resultCost: number;
 
-        return {
-          success: true,
-          data: {
-            id: result.id,
-            url: result.url,
-            provider: providerId,
-            generatedAt: new Date().toISOString(),
-            cost: result.cost,
-            params,
-          },
-        };
-      }
-
-      const result = await generateViaOpenAICompat(
-        endpoint,
-        resolvedKey!,
-        {
-          prompt: params.prompt,
+      if (providerId === 'google') {
+        // Google uses native generateContent API
+        const result = await generateViaGoogleAI(
+          resolvedKey,
           model,
-          size: `${params.width ?? 1024}x${params.height ?? 576}`,
-          style: params.style,
-        },
-        costPerImage ?? 0.01,
-        providerId,
-      );
+          params.prompt,
+          params.aspectRatio ?? '16:9',
+          costPerImage ?? 0.02,
+        );
+        resultUrl = result.url;
+        resultCost = result.cost;
+      } else {
+        // All other providers use OpenAI-compatible API
+        const result = await generateViaOpenAICompat(
+          endpoint,
+          resolvedKey,
+          {
+            prompt: params.prompt,
+            model,
+            size: `${params.width ?? 1024}x${params.height ?? 576}`,
+            style: params.style,
+          },
+          costPerImage ?? 0.01,
+          providerId,
+        );
+        resultUrl = result.url;
+        resultCost = result.cost;
+      }
 
       return {
         success: true,
         data: {
-          id: result.id,
-          url: result.url,
+          id: `${providerId}-${Date.now()}`,
+          url: resultUrl,
           provider: providerId,
           generatedAt: new Date().toISOString(),
-          cost: result.cost,
+          cost: resultCost,
           params,
         },
       };

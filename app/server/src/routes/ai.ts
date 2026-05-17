@@ -252,6 +252,7 @@ export const aiRoutes = new Elysia({ prefix: '/api/ai' })
     }
 
     const storyboards = [];
+    const errors: string[] = [];
     for (const shot of shots) {
       const params = {
         prompt: shot.prompt,
@@ -278,13 +279,25 @@ export const aiRoutes = new Elysia({ prefix: '/api/ai' })
           provider: providerId,
           model,
         });
+      } else {
+        errors.push(result.error || `Generation failed for shot ${shot.shotId}`);
       }
+    }
+
+    if (storyboards.length === 0) {
+      return {
+        success: false,
+        error: errors[0] || 'Generation failed',
+        generated: 0,
+        totalCost: 0,
+        storyboards: [],
+      };
     }
 
     return {
       success: true,
       generated: storyboards.length,
-      totalCost: storyboards.reduce((sum: number, s: typeof storyboards[0]) => sum + s.cost, 0),
+      totalCost: storyboards.reduce((sum: number, s: typeof storyboards[0]) => sum + (Number.isFinite(s.cost) ? s.cost : 0), 0),
       storyboards,
     };
   }, {

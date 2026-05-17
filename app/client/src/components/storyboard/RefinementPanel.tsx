@@ -23,8 +23,8 @@ const STYLE_OPTIONS: { value: StoryboardStyle; label: string }[] = [
   { value: 'watercolor', label: 'Watercolor' },
 ];
 
-const DEFAULT_PROVIDER_ID = 'google';
-const DEFAULT_MODEL_ID = 'gemini-3.1-flash';
+const DEFAULT_PROVIDER_ID = 'openai';
+const DEFAULT_MODEL_ID = 'gpt-image-1';
 
 export function RefinementPanel({ storyboard, onClose, onRefined }: RefinementPanelProps) {
   const [refinementPrompt, setRefinementPrompt] = useState(storyboard.refinementPrompt || '');
@@ -94,13 +94,17 @@ export function RefinementPanel({ storyboard, onClose, onRefined }: RefinementPa
         throw new Error(response.error || 'Failed to generate refined storyboard');
       }
 
+      if (!response.data.imageUrl) {
+        throw new Error('Generation completed without an image URL');
+      }
+
       const newData: StoryboardData = {
         imageUrl: response.data.imageUrl,
         generationParams: {
           ...storyboard.generationParams,
         },
         apiProvider: response.data.provider as StoryboardData['apiProvider'],
-        cost: response.data.cost,
+        cost: response.data.cost ?? 0,
         style: selectedStyle as StoryboardData['style'],
         refinementPrompt,
       };

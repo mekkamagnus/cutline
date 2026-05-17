@@ -31,6 +31,35 @@ interface OpenAIImageResponse {
   model?: string;
 }
 
+const DALL_E_3_SIZES = ['1024x1024', '1024x1792', '1792x1024'];
+const GPT_IMAGE_SIZES = ['1536x1024', '1024x1536', '1024x1024'];
+
+function normalizeSize(size: string | undefined, allowed: string[]): string {
+  if (size && allowed.includes(size)) return size;
+
+  const match = size?.match(/^(\d+)x(\d+)$/);
+  if (!match) return allowed[0]!;
+
+  const width = Number(match[1]);
+  const height = Number(match[2]);
+  const landscape = allowed.filter((s) => {
+    const [w, h] = s.split('x').map(Number);
+    return w > h;
+  });
+  const portrait = allowed.filter((s) => {
+    const [w, h] = s.split('x').map(Number);
+    return h > w;
+  });
+  const square = allowed.filter((s) => {
+    const [w, h] = s.split('x').map(Number);
+    return w === h;
+  });
+
+  if (width > height && landscape[0]) return landscape[0];
+  if (height > width && portrait[0]) return portrait[0];
+  return square[0] ?? allowed[0]!;
+}
+
 export async function generateViaOpenAICompat(
   endpoint: string,
   apiKey: string,
@@ -39,16 +68,26 @@ export async function generateViaOpenAICompat(
   providerName: string = 'unknown',
 ): Promise<OpenAIImageResult> {
   const url = `${endpoint.replace(/\/$/, '')}/images/generations`;
+  const isGPTImage = /^gpt-image-/i.test(params.model);
+  const isDallE = /^dall-e-/i.test(params.model);
 
   const body: Record<string, unknown> = {
     model: params.model,
     prompt: params.prompt,
     n: params.n ?? 1,
-    response_format: params.response_format ?? 'b64_json',
   };
 
-  if (params.size) {
-    body.size = params.size;
+  if (isGPTImage) {
+    body.size = normalizeSize(params.size, GPT_IMAGE_SIZES);
+    body.quality = 'low';
+  } else if (isDallE) {
+    body.size = normalizeSize(params.size, DALL_E_3_SIZES);
+    body.response_format = params.response_format ?? 'b64_json';
+  } else {
+    body.response_format = params.response_format ?? 'b64_json';
+    if (params.size) {
+      body.size = params.size;
+    }
   }
 
   const response = await fetch(url, {
@@ -84,36 +123,6 @@ export async function generateViaOpenAICompat(
   return {
     id: `${providerName}-${Date.now()}`,
     url: imageUrl,
-    cost: costPerImage,
-    model: params.model,
-    provider: providerName,
-  };
-}
-
-/**
- * Mock implementation for development — returns placeholder images.
- */
-function hashString(str: string): string {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const ch = str.charCodeAt(i);
-    hash = ((hash << 5) - hash + ch) | 0;
-  }
-  return Math.abs(hash).toString(36);
-}
-
-export async function mockGenerate(
-  params: OpenAIImageParams,
-  providerName: string = 'mock',
-  costPerImage: number = 0.01,
-): Promise<OpenAIImageResult> {
-  await new Promise((resolve) => setTimeout(resolve, 600));
-
-  const seed = hashString(params.prompt);
-
-  return {
-    id: `mock-${providerName}-${seed}`,
-    url: `https://picsum.photos/seed/${seed}/1024/576`,
     cost: costPerImage,
     model: params.model,
     provider: providerName,

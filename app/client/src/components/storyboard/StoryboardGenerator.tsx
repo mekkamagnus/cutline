@@ -9,10 +9,27 @@ import { useShotListConfirmationStatus, useShots } from '@/hooks';
 import { useSettingsStore, type AvailableModel } from '@/stores/settings-store';
 import { api } from '@/lib/api-client';
 import { buildShotPrompt } from '@/lib/build-shot-prompt';
+import type { StoryboardPanel } from '@/types';
 
 interface StoryboardGeneratorProps {
   sceneId: string;
-  onGenerationComplete?: () => void;
+  selectedStyle?: string;
+  onStyleChange?: (style: string) => void;
+  onGenerationComplete?: (panels: StoryboardPanel[]) => void;
+}
+
+interface DynamicStoryboardResponse {
+  success: boolean;
+  generated: number;
+  totalCost: number;
+  storyboards: Array<{
+    id: string;
+    shotId: string;
+    imageUrl?: string;
+    cost?: number;
+    provider: string;
+    model?: string;
+  }>;
 }
 
 const STORYBOARD_STYLES = [
@@ -25,11 +42,13 @@ const STORYBOARD_STYLES = [
   { value: 'storyboard', label: 'Traditional Storyboard' },
 ] as const;
 
-const DEFAULT_PROVIDER_ID = 'google';
-const DEFAULT_MODEL_ID = 'gemini-3.1-flash';
+const DEFAULT_PROVIDER_ID = 'openai';
+const DEFAULT_MODEL_ID = 'gpt-image-1';
 
-export function StoryboardGenerator({ sceneId, onGenerationComplete }: StoryboardGeneratorProps) {
-  const [selectedStyle, setSelectedStyle] = useState('manga');
+export function StoryboardGenerator({ sceneId, selectedStyle: controlledStyle, onStyleChange, onGenerationComplete }: StoryboardGeneratorProps) {
+  const [internalStyle, setInternalStyle] = useState('manga');
+  const selectedStyle = controlledStyle ?? internalStyle;
+  const setSelectedStyle = onStyleChange ?? setInternalStyle;
   const [selectedProviderId, setSelectedProviderId] = useState(DEFAULT_PROVIDER_ID);
   const [selectedModelId, setSelectedModelId] = useState(DEFAULT_MODEL_ID);
   const [error, setError] = useState<string | null>(null);
@@ -85,9 +104,10 @@ export function StoryboardGenerator({ sceneId, onGenerationComplete }: Storyboar
       shotId: s.id,
       prompt: buildShotPrompt(s, selectedStyle),
     }));
+    const promptByShotId = new Map(shotsPayload.map((shot) => [shot.shotId, shot.prompt]));
 
     try {
-      const response = await api.post('/api/ai/generate/dynamic/storyboards', {
+      const response = await api.post<DynamicStoryboardResponse>('/api/ai/generate/dynamic/storyboards', {
         shots: shotsPayload,
         style: selectedStyle,
         providerId: selectedModel.providerId,
@@ -101,7 +121,33 @@ export function StoryboardGenerator({ sceneId, onGenerationComplete }: Storyboar
         throw new Error(response.error || 'Generation failed');
       }
 
-      onGenerationComplete?.();
+      const storyboards = response.data?.storyboards ?? [];
+      const fallbackCost = selectedModel.pricePerImage ?? 0;
+      const panels: StoryboardPanel[] = storyboards
+        .filter((storyboard) => Boolean(storyboard.imageUrl))
+        .map((storyboard) => ({
+          id: storyboard.id,
+          shotId: storyboard.shotId,
+          imageUrl: storyboard.imageUrl as string,
+          generatedAt: new Date(),
+          generationParams: {
+            prompt: promptByShotId.get(storyboard.shotId) ?? '',
+            width: 1024,
+            height: 576,
+          },
+          apiProvider: storyboard.provider as StoryboardPanel['apiProvider'],
+          model: storyboard.model,
+          cost: typeof storyboard.cost === 'number' && Number.isFinite(storyboard.cost) ? storyboard.cost : fallbackCost,
+          style: selectedStyle as StoryboardPanel['style'],
+          version: 1,
+          previousVersions: [],
+        }));
+
+      if (panels.length === 0) {
+        throw new Error('Generation completed without image URLs');
+      }
+
+      onGenerationComplete?.(panels);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Generation failed');
     }

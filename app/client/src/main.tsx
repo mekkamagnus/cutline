@@ -14,6 +14,7 @@ import './styles/mobile.css';
 import './styles/shot-list.css';
 import './styles/fountain.css';
 import './styles/storyboard.css';
+import './styles/toast.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
