@@ -10,6 +10,7 @@ import { ShotForm } from './ShotForm';
 import { ConfirmationButton } from './ConfirmationButton';
 import { ShotListStatus } from './ShotListStatus';
 import { useShots, useCreateShot, useUpdateShot, useDeleteShot, useConfirmShotList, useUnlockShotList, useShotListConfirmationStatus } from '@/hooks';
+import { useToastStore } from '@/stores/toast-store';
 import type { Shot, ShotData } from '@/types';
 
 interface ShotListEditorProps {
@@ -76,31 +77,31 @@ export function ShotListEditor({ sceneId, onShotSelect, selectedShotId, initialS
     [deleteShot, sceneId]
   );
 
+  const addToast = useToastStore((s) => s.addToast);
+
   const handleConfirmShotList = useCallback(async () => {
     if (displayShots.length === 0) {
-      alert('Cannot confirm an empty shot list');
+      addToast({ message: 'Cannot confirm an empty shot list. Add at least one shot first.', type: 'error' });
       return;
     }
 
     const totalCost = displayShots.length * 0.002;
-    const confirmed = window.confirm(
-      `Confirm shot list?\n\n${displayShots.length} shots will generate approximately $${totalCost.toFixed(3)} in AI generation costs.\n\nAfter confirmation, you cannot edit shots until you unlock.`
-    );
-
-    if (confirmed) {
-      await confirmShotList.mutateAsync(sceneId);
-    }
-  }, [confirmShotList, sceneId, displayShots.length]);
+    addToast({
+      message: `Confirm shot list?\n\n${displayShots.length} shots will generate approximately $${totalCost.toFixed(3)} in AI generation costs.\n\nAfter confirmation, you cannot edit shots until you unlock.`,
+      type: 'confirm',
+      confirmLabel: 'Confirm',
+      onConfirm: () => confirmShotList.mutateAsync(sceneId),
+    });
+  }, [addToast, confirmShotList, sceneId, displayShots.length]);
 
   const handleUnlockShotList = useCallback(async () => {
-    const confirmed = window.confirm(
-      'Unlock shot list for editing?\n\nThis will allow you to edit shots, but storyboards may become outdated.'
-    );
-
-    if (confirmed) {
-      await unlockShotList.mutateAsync(sceneId);
-    }
-  }, [unlockShotList, sceneId]);
+    addToast({
+      message: 'Unlock shot list for editing?\n\nThis will allow you to edit shots, but storyboards may become outdated.',
+      type: 'confirm',
+      confirmLabel: 'Unlock',
+      onConfirm: () => unlockShotList.mutateAsync(sceneId),
+    });
+  }, [addToast, unlockShotList, sceneId]);
 
   const handleMoveShot = useCallback(
     async (shotId: string, direction: 'up' | 'down') => {

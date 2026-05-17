@@ -17,6 +17,7 @@ import { MobileAISuggestions } from '@/components/mobile/MobileAISuggestions';
 import { useBreakpoint } from '@/hooks';
 import { useUIStore, useSettingsStore } from '@/stores';
 import { SettingsPanel } from '@/components/settings';
+import { ToastContainer } from '@/components/ToastContainer';
 import { fountainParser } from '@/services/fountain-parser';
 import { generateShotsFromScene } from '@/services/shot-generator';
 import { Result } from '@/lib/fp';
@@ -325,6 +326,7 @@ CUT TO BLACK.`);
             initialContent={content}
             onChange={setContent}
             onSave={handleSave}
+            selectedSceneId={currentSceneId}
           />
         );
       case 'shots':
@@ -351,6 +353,7 @@ CUT TO BLACK.`);
             initialContent={content}
             onChange={setContent}
             onSave={handleSave}
+            selectedSceneId={currentSceneId}
           />
         );
     }
@@ -492,6 +495,7 @@ CUT TO BLACK.`);
       </div>
 
       <FormatBar onFormat={handleFormat} />
+      <ToastContainer />
     </div>
   );
 }

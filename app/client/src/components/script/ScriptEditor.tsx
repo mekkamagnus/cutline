@@ -17,6 +17,7 @@ interface ScriptEditorProps {
   onSave?: (content: string) => void;
   readOnly?: boolean;
   autoSaveDelay?: number;
+  selectedSceneId?: string | null;
 }
 
 export function ScriptEditor({
@@ -25,6 +26,7 @@ export function ScriptEditor({
   onSave,
   readOnly = false,
   autoSaveDelay = 2000,
+  selectedSceneId,
 }: ScriptEditorProps) {
   const [content, setContent] = useState(initialContent);
   const [isDirty, setIsDirty] = useState(false);
@@ -55,6 +57,47 @@ export function ScriptEditor({
       setTokens(tokensResult.right);
     }
   }, [content]);
+
+  // Scroll to selected scene
+  useEffect(() => {
+    if (!selectedSceneId || !textareaRef.current) return;
+    const parseResult = fountainParser.parse(content);
+    if (!Result.isOk(parseResult)) return;
+
+    const sceneIndex = parseResult.right.scenes.findIndex(
+      (s) => s.id === selectedSceneId
+    );
+    if (sceneIndex === -1) return;
+
+    const sceneTokens = tokens.filter((t) => t.type === 'scene_heading');
+    const targetToken = sceneTokens[sceneIndex];
+    if (!targetToken) return;
+
+    const textarea = textareaRef.current;
+    const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight) || 20;
+    const targetScroll = (targetToken.lineNumber - 1) * lineHeight;
+
+    // Find the scrollable ancestor with overflow:auto/scroll (not just overflow:visible)
+    let scrollContainer: HTMLElement | null = null;
+    let el: HTMLElement | null = textarea;
+    while (el) {
+      const style = getComputedStyle(el);
+      const canScroll = el.clientHeight > 0 && el.clientHeight < el.scrollHeight;
+      const hasOverflow = style.overflowY === 'auto' || style.overflowY === 'scroll';
+      if (canScroll && hasOverflow) {
+        scrollContainer = el;
+        break;
+      }
+      el = el.parentElement;
+    }
+
+    if (scrollContainer) {
+      const textareaTop = textarea.getBoundingClientRect().top;
+      const containerTop = scrollContainer.getBoundingClientRect().top;
+      const offset = textareaTop - containerTop;
+      scrollContainer.scrollTo({ top: targetScroll - lineHeight * 2 + offset, behavior: 'smooth' });
+    }
+  }, [selectedSceneId]);
 
   // Auto-save functionality
   useEffect(() => {
