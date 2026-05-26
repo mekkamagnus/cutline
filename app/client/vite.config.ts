@@ -6,7 +6,7 @@ import path from 'path';
 export default defineConfig({
   server: {
     host: true,
-    allowedHosts: 'all',
+    allowedHosts: ['mekaels-macbook-pro.local'],
   },
   plugins: [
     react(),
